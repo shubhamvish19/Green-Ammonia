@@ -852,7 +852,9 @@
     <div class="small muted mt">Simulation: 8,760 h + 72 h cyclic warm-up in ${fmt(r.ms, 0)} ms · max busbar imbalance ${a.balanceErr.toExponential(1)} MW · electrolyser loading order ${r.derived.ORDER.join(' → ')} · PEM ${fmt(r.derived.PEM_D, 0)} MW / ALK ${fmt(r.derived.ALK_D, 0)} MW.</div>`;
     countUp(document);
     $('#btnExpPlant').onclick = exportPlant;
-    $('#plTop').innerHTML = card('Live process flow', 'Annual averages from the simulation · rotor and flow animation follow the site wind and loop utilisation', `<div class="pfdwrap" style="${animVars()}">${TRE_SCENE.processDiagram(pfdData(r))}</div>`, '', 'mb');
+    const pd = pfdData(r);
+    $('#plTop').innerHTML = card('Plant view', 'Isometric site layout · labels show live simulation results · turbines, flows and vehicles animate', `<div class="isowrap" style="${animVars()}">${TRE_SCENE.isoPlant({ solar: `${fmt(c.Solar_Capacity_MWp)} MWp · ${fmt(a.solar / 1000, 0)} GWh`, wind: `${fmt(c.Wind_Capacity_MWp)} MW · ${fmt(a.wind / 1000, 0)} GWh`, ely: pd.ely, bess: pd.bess, loop: pd.loop, h2s: `${fmt(c.Hydrogen_Storage_Ton)} t · ${fmt(a.h2, 0)} t/yr H₂`, tank: `${fmt(c.Derivative_Storage_Capacity_Ton)} t · ${pd.nh3}`, offtake: pd.offtake })}</div>`, '', 'mb') +
+      card('Live process flow', 'Annual averages from the simulation · rotor and flow animation follow the site wind and loop utilisation', `<div class="pfdwrap" style="${animVars()}">${TRE_SCENE.processDiagram(pfdData(r))}</div>`, '', 'mb');
     const t = theme(), H = r.hourly;
     // sankey
     const bessLoss = a.bessCharge - a.bessDisch;
