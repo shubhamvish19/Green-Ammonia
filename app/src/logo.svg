@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 30 960 360" role="img" aria-label="TrueRE — Oriana Power Limited">
+  <g fill="#FFD000">
+    <rect x="52" y="84" width="50" height="14"/><rect x="52" y="104" width="50" height="22"/><rect x="52" y="132" width="50" height="152"/>
+    <rect x="114" y="44" width="50" height="14"/><rect x="114" y="64" width="50" height="22"/><rect x="114" y="92" width="50" height="192"/>
+    <rect x="178" y="84" width="50" height="14"/><rect x="178" y="104" width="50" height="22"/><rect x="178" y="132" width="50" height="152"/>
+    <rect x="52" y="272" width="918" height="16"/>
+  </g>
+  <text x="248" y="250" font-family="'Book Antiqua','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif" font-weight="700" font-size="196" letter-spacing="2"><tspan fill="#0B0B0B">True</tspan><tspan fill="#1B5A0A">RE</tspan></text>
+  <text x="511" y="364" text-anchor="middle" font-family="'Book Antiqua','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif" font-weight="700" font-size="62" letter-spacing="3" fill="#0B0B0B">ORIANA POWER LIMITED</text>
+</svg>

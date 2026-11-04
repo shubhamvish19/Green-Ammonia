@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrueRE Hybrid Studio</title>
+<meta name="description" content="Oriana Power TrueRE Hybrid Studio — site-specific solar PV and wind energy profiling with hourly green hydrogen / ammonia plant simulation and screening economics.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>/*@@LEAFLET_CSS@@*/</style>
+<style>/*@@STYLES@@*/</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand" title="TrueRE — Oriana Power Limited"><!--@@LOGO@@--></div>
+    <div class="prod">Hybrid Studio · RE Profiler</div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sep"></div>
+    <div class="foot"><b>TrueRE Hybrid Studio</b> v1.0<br>Hourly 8760 engine · ERA5 / NASA POWER · PVsyst-type loss chain · IEC 61400-12-1 wind<br>© Oriana Power Limited</div>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <button class="btn iconbtn menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div>
+        <div class="crumb" id="crumb">Workflow</div>
+        <h1 id="pageTitle">Site &amp; Resource</h1>
+      </div>
+      <div class="grow"></div>
+      <span class="chip" id="chipSite"><span class="dot"></span><span>No site</span></span>
+      <span class="chip" id="chipData"><span class="dot"></span><span>No resource data</span></span>
+      <button class="btn sm" id="btnOpen" title="Open project (.json)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="bl">Open</span></button>
+      <button class="btn sm" id="btnSave" title="Save project (.json)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v6h8"/><rect x="7" y="13" width="10" height="7"/></svg><span class="bl">Save</span></button>
+      <button class="btn sm iconbtn" id="btnTheme" title="Toggle light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <input type="file" id="fileProject" accept=".json" hidden>
+    </header>
+    <div class="content" id="content">
+      <section class="page" id="page-site"></section>
+      <section class="page" id="page-pv"></section>
+      <section class="page" id="page-wind"></section>
+      <section class="page" id="page-profile"></section>
+      <section class="page" id="page-plant"></section>
+      <section class="page" id="page-econ"></section>
+      <section class="page" id="page-explore"></section>
+      <section class="page" id="page-docs"></section>
+    </div>
+  </main>
+</div>
+<div class="busy" id="busy"><div class="box"><span class="spinner"></span><b id="busyMsg">Working…</b><div class="progress mt"><i id="busyBar"></i></div><div class="log mt" id="busyLog"></div></div></div>
+<div class="toast" id="toast"></div>
+<script>/*@@LIBS@@*/</script>
+<script>/*@@SAMPLE@@*/</script>
+<script>/*@@ENGINE_RE@@*/</script>
+<script>/*@@ENGINE_PLANT@@*/</script>
+<script>/*@@UI@@*/</script>
+</body>
+</html>
