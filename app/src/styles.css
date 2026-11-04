@@ -330,3 +330,9 @@ table.t tr.tot td{font-weight:700;border-top:1px solid var(--border-strong);back
 .fld:focus-within .fi{transform:scale(1.12);box-shadow:0 0 0 3px color-mix(in srgb,var(--fc) 18%,transparent)}
 .fld>span{gap:7px}
 .months+.fi{display:none}
+.geo{width:100%;height:auto;display:block;border-radius:14px}
+.geo .rotor{transform-box:view-box;animation:spin var(--rot,6s) linear infinite}
+.geo .wflow{stroke-dasharray:6 8;animation:dash 1.2s linear infinite}
+.kpi .v.tick{animation:pop .5s ease}
+@keyframes pop{0%{opacity:.4;transform:translateY(3px)}100%{opacity:1;transform:none}}
+.card.span2{grid-column:1/-1}

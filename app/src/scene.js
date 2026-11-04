@@ -224,3 +224,132 @@
   }
   window.TRE_SCENE.processDiagram = processDiagram;
 })();
+
+/* ---------------- PV array geometry (side view, live sun & shading) ---------------- */
+(function () {
+  'use strict';
+  const D = Math.PI / 180;
+  let raf = 0;
+  function pvGeometry(el, p, lat) {
+    cancelAnimationFrame(raf);
+    const W = 640, H = 230, G = 186, w = 64, pitch = w / Math.max(0.15, p.gcr), x0 = 70, n = 4;
+    const tracker = p.mounting === 'tracker';
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="geo" role="img" aria-label="Row geometry and shading">
+      <defs><linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEEBFF"/><stop offset="1" stop-color="#FFF6EC"/></linearGradient>
+      <linearGradient id="gPan2" x1="0" x2="1"><stop offset="0" stop-color="#7286DC"/><stop offset="1" stop-color="#9DB0F4"/></linearGradient></defs>
+      <rect width="${W}" height="${G}" fill="url(#gSky)" rx="14"/>
+      <rect y="${G}" width="${W}" height="${H - G}" fill="#EFF8F3"/>
+      <g id="geoRays"></g><g id="geoShadow"></g><g id="geoRows"></g>
+      <g id="geoSun"><circle r="26" fill="#FFD8A0" opacity=".35"/><circle r="12" fill="#FFC77E"/></g>
+      <g font-family="Inter,sans-serif" font-size="11" fill="#6E6A8A" font-weight="600">
+        <text x="14" y="22" id="geoT1"></text><text x="14" y="38" id="geoT2" fill="#A19DBA" font-weight="500"></text>
+        <text x="${W - 14}" y="22" text-anchor="end" id="geoT3"></text></g>
+      <g id="geoDim"></g></svg>`;
+    const $ = (id) => el.querySelector('#' + id);
+    // pitch dimension
+    const px = (i) => x0 + i * pitch * 1.0;
+    $('geoDim').innerHTML = `<path d="M${px(1)},${G + 16} L${px(2)},${G + 16}" stroke="#9284F7" stroke-width="1" marker-start="" /><path d="M${px(1)},${G + 11} L${px(1)},${G + 21} M${px(2)},${G + 11} L${px(2)},${G + 21}" stroke="#9284F7"/>
+      <text x="${(px(1) + px(2)) / 2}" y="${G + 34}" text-anchor="middle" font-size="10.5" font-family="Inter,sans-serif" fill="#7C6CF2" font-weight="700">pitch ${(w / p.gcr / w * 2.38).toFixed(1)} m · GCR ${p.gcr.toFixed(2)}</text>`;
+    const decl = -23.44 * Math.cos(2 * Math.PI * (355 + 10) / 365); // winter solstice (worst case)
+    let t0 = performance.now();
+    const frame = (now) => {
+      const ph = ((now - t0) / 9000) % 1;                // 9 s per day sweep
+      const hour = 7 + ph * 10;                          // 07:00 → 17:00
+      const ha = (hour - 12) * 15 * D, phi = lat * D, dec = decl * D;
+      const sinAlt = Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(ha);
+      const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+      const az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)); // 0 = south
+      // projected sun elevation in the plane of the section
+      let ap, tilt;
+      if (tracker) { // E–W section; sun projection onto E-W plane
+        const x = Math.cos(alt) * Math.sin(az), z = Math.sin(alt);
+        const th = Math.atan2(x, z);                     // true-tracking
+        let rot = th;
+        if (p.backtracking) { const c = Math.min(Math.abs(Math.cos(th)) / p.gcr, 1); rot = th - Math.sign(th) * Math.acos(c); }
+        rot = Math.max(-p.trackerMax * D, Math.min(p.trackerMax * D, rot));
+        tilt = rot; ap = Math.PI / 2 - Math.abs(th);
+        var sunDir = Math.sign(th) || 1;
+      } else {
+        tilt = p.tilt * D * (lat >= 0 ? 1 : 1);
+        const c = Math.cos(az);                          // component toward equator
+        ap = c > 0 ? Math.atan(Math.tan(alt) / c) : alt; var sunDir = -1;
+      }
+      const vis = alt > 0.02;
+      // sun position (drawn on the facing side)
+      const sx = tracker ? W / 2 + Math.sin(-(Math.PI / 2 - ap) * sunDir) * 250 * -1 : 40 + ph * (W - 80);
+      const sy = G - 20 - Math.sin(Math.max(0, ap)) * 150;
+      $('geoSun').setAttribute('transform', `translate(${tracker ? (W / 2 - Math.cos(ap) * 260 * (sunDir)) : sx},${sy})`);
+      $('geoSun').style.opacity = vis ? 1 : 0.25;
+      // rows
+      let rows = '', shadows = '', rays = '';
+      const tg = Math.tan(Math.max(0.02, ap));
+      for (let i = 0; i < n; i++) {
+        const cx = x0 + i * pitch + w / 2, cy = G - 34;
+        const dx = Math.cos(tilt) * w / 2, dy = Math.sin(tilt) * w / 2;
+        // fixed: lower edge toward equator side (left = equator)
+        const a = tracker ? [cx - dx, cy + dy] : [cx - dx, cy + dy], b = tracker ? [cx + dx, cy - dy] : [cx + dx, cy - dy];
+        const lo = a[1] > b[1] ? a : b, hi = a[1] > b[1] ? b : a;
+        rows += `<line x1="${cx}" y1="${G}" x2="${cx}" y2="${cy}" stroke="#B6B0D6" stroke-width="3"/>
+          <line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="url(#gPan2)" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="${cx}" cy="${cy}" r="3" fill="#fff" stroke="#9284F7" stroke-width="1.5"/>`;
+        if (vis) {
+          // shadow of the panel on the ground (cast away from the sun)
+          const dir = tracker ? sunDir : 1;
+          const s1 = a[0] + dir * (G - a[1]) / tg, s2 = b[0] + dir * (G - b[1]) / tg;
+          shadows += `<path d="M${Math.min(s1, s2).toFixed(1)},${G} L${Math.max(s1, s2).toFixed(1)},${G} L${Math.max(s1, s2).toFixed(1)},${G + 5} L${Math.min(s1, s2).toFixed(1)},${G + 5} Z" fill="#6E63B8" opacity=".22"/>`;
+          if (i === 1) rays += `<line x1="${hi[0]}" y1="${hi[1]}" x2="${(hi[0] + dir * (G - hi[1]) / tg).toFixed(1)}" y2="${G}" stroke="#F5A65B" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8"/>`;
+        }
+      }
+      $('geoRows').innerHTML = rows; $('geoShadow').innerHTML = shadows; $('geoRays').innerHTML = rays;
+      // shaded fraction on the next row (2-D formula)
+      const beta = Math.abs(tilt);
+      const fs = vis && beta > 0.01 && !(tracker && p.backtracking) ? Math.max(0, Math.min(1, 1 - Math.sin(ap) / (p.gcr * Math.sin(ap + beta)))) : 0;
+      const hh = Math.floor(hour), mm = Math.round((hour - hh) * 60);
+      $('geoT1').textContent = `${tracker ? 'Single-axis tracker' : 'Fixed tilt ' + p.tilt + '°'} · winter solstice · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      $('geoT2').textContent = `Sun elevation ${(alt / D).toFixed(1)}° · ${tracker ? 'rotation ' + (tilt / D).toFixed(1) + '°' : 'profile angle ' + (ap / D).toFixed(1) + '°'}`;
+      const t3 = $('geoT3'); t3.textContent = `Row-to-row shading ${(fs * 100).toFixed(0)}%`; t3.setAttribute('fill', fs > 0.005 ? '#E8705F' : '#2FB383');
+      if (el.isConnected) raf = requestAnimationFrame(frame);
+    };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { t0 = performance.now() - 4500; frame(performance.now()); cancelAnimationFrame(raf); }
+    else raf = requestAnimationFrame(frame);
+  }
+
+  /* ---------------- wind shear profile with rotor ---------------- */
+  function windProfile(v100, alpha, hub, D_, href) {
+    const W = 900, H = 290, top = 22, bot = 262, zmax = Math.max(220, Math.ceil((hub + D_ / 2 + 20) / 20) * 20);
+    const y = (z) => bot - (z / zmax) * (bot - top);
+    const v = (z) => v100 * Math.pow(Math.max(z, 2) / href, alpha);
+    const vmax = v(zmax) * 1.08, x = (s) => 70 + (s / vmax) * 420;
+    let curve = ''; for (let z = 2; z <= zmax; z += 4) curve += `${curve ? 'L' : 'M'}${x(v(z)).toFixed(1)},${y(z).toFixed(1)}`;
+    let arrows = '';
+    for (let z = 20; z <= zmax - 10; z += 20) {
+      const xs = x(v(z)), yy = y(z);
+      arrows += `<line x1="70" y1="${yy}" x2="${xs - 6}" y2="${yy}" stroke="#9CCBF5" stroke-width="2" class="wflow" style="animation-duration:${(18 / Math.max(1, v(z))).toFixed(2)}s"/><path d="M${xs - 7},${yy - 4} L${xs},${yy} L${xs - 7},${yy + 4}" fill="#5EAEEB"/>`;
+    }
+    const ticks = []; for (let z = 0; z <= zmax; z += 40) ticks.push(`<line x1="64" y1="${y(z)}" x2="70" y2="${y(z)}" stroke="#C9C4E0"/><text x="58" y="${y(z) + 3.5}" text-anchor="end" font-size="10" fill="#A19DBA">${z}</text>`);
+    const rotorTop = hub + D_ / 2, rotorBot = Math.max(2, hub - D_ / 2), tx = 640, R = (D_ / 2) / zmax * (bot - top);
+    const blade = (a) => `<path d="M0,0 C${R * 0.09},${-R * 0.15} ${R * 0.08},${-R * 0.6} ${R * 0.02},${-R} L${-R * 0.02},${-R} C${-R * 0.06},${-R * 0.6} ${-R * 0.07},${-R * 0.15} 0,0Z" transform="rotate(${a})" fill="#FFFFFF" stroke="#C9C0F2" stroke-width=".8"/>`;
+    const rot = Math.max(1.6, Math.min(14, 34 / Math.max(1, v(hub))));
+    return `<svg viewBox="0 0 ${W} ${H}" class="geo" role="img" aria-label="Wind shear profile">
+      <defs><linearGradient id="gWs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6F3FD"/><stop offset="1" stop-color="#F7F6FC"/></linearGradient></defs>
+      <rect x="0" y="0" width="${W}" height="${bot}" fill="url(#gWs)" rx="14"/><rect y="${bot}" width="${W}" height="${H - bot}" fill="#EFF8F3"/>
+      <rect x="70" y="${y(rotorTop)}" width="${W - 90}" height="${y(rotorBot) - y(rotorTop)}" fill="#9284F7" opacity=".07"/>
+      <line x1="70" y1="${y(hub)}" x2="${W - 20}" y2="${y(hub)}" stroke="#9284F7" stroke-dasharray="4 4"/>
+      <line x1="70" y1="${y(href)}" x2="${W - 20}" y2="${y(href)}" stroke="#A3ACC7" stroke-dasharray="2 5"/>
+      ${ticks.join('')}<text x="20" y="${top + 4}" font-size="10" fill="#A19DBA">m</text>
+      ${arrows}
+      <path d="${curve}" fill="none" stroke="#5EAEEB" stroke-width="2.5"/>
+      <circle cx="${x(v(hub))}" cy="${y(hub)}" r="4.5" fill="#fff" stroke="#9284F7" stroke-width="2"/>
+      <circle cx="${x(v(href))}" cy="${y(href)}" r="3.5" fill="#fff" stroke="#A3ACC7" stroke-width="2"/>
+      <path d="M${tx - 4},${bot} L${tx - 1.6},${y(hub)} L${tx + 1.6},${y(hub)} L${tx + 4},${bot}Z" fill="#FFFFFF" stroke="#D2CCEE"/>
+      <g class="rotor" style="transform-origin:${tx}px ${y(hub)}px;--rot:${rot.toFixed(2)}s"><g transform="translate(${tx},${y(hub)})">${blade(0)}${blade(120)}${blade(240)}</g></g>
+      <circle cx="${tx}" cy="${y(hub)}" r="4" fill="#fff" stroke="#9284F7" stroke-width="1.5"/>
+      <g font-family="Inter,sans-serif" font-weight="700" font-size="11">
+        <text x="${W - 16}" y="${y(hub) - 6}" text-anchor="end" fill="#7C6CF2">Hub ${hub} m · ${v(hub).toFixed(2)} m/s</text>
+        <text x="${W - 16}" y="${y(href) + 14}" text-anchor="end" fill="#8A86A6" font-weight="600">Reference ${href} m · ${v(href).toFixed(2)} m/s</text>
+        <text x="${W - 16}" y="${y(rotorTop) + 13}" text-anchor="end" fill="#8A86A6" font-weight="600">Rotor tip ${rotorTop.toFixed(0)} m · ${v(rotorTop).toFixed(2)} m/s</text>
+        <text x="78" y="${top + 12}" fill="#5EAEEB">v(z) = v<tspan font-size="8" dy="3">ref</tspan><tspan dy="-3"> · (z / z</tspan><tspan font-size="8" dy="3">ref</tspan><tspan dy="-3">)</tspan><tspan font-size="8" dy="-5">α</tspan><tspan dy="5">  ·  α = ${alpha.toFixed(3)}</tspan></text>
+      </g></svg>`;
+  }
+  Object.assign(window.TRE_SCENE, { pvGeometry, windProfile });
+})();

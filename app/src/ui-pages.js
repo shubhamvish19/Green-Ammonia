@@ -342,6 +342,7 @@
         ${card('Resource diurnal / seasonal pattern', 'Mean by month and local hour', '<div class="chart" id="chHeatRes"></div>', `<div class="seg" id="heatSel"><button class="on" data-k="ghi">GHI</button><button data-k="vhub">Wind</button><button data-k="temp">Temp.</button></div>`)}
       </div>
       ${S.res.basis === 'tmy' && R.re.tmy ? card('Typical meteorological year — selected months', 'Lowest weighted Finkelstein–Schafer statistic per month', tmyTable()) : ''}`;
+    countUp(document);
     el.lastElementChild && el.lastElementChild.classList.add('mt');
     const t = theme();
     const mGhi = [], mDni = [], mDhi = [], mT = [];
@@ -513,6 +514,7 @@
       ${kpi('P90 (1-year)', fmt(ex.P90_1y, 0), 'kWh/kWp', `IAV ${pct(ex.iav)} · unc. ${fmt(S.prof.uncSolar, 1)}%`, 'var(--curt)')}
       ${kpi('Inverter clipping', pct(clipPct, 2), '', `DC/AC ${fmt(S.pv.dcac, 2)}`, 'var(--bess)')}
     </div>
+    ${card('Array geometry & shading', 'Live side view · winter solstice day sweep · follows tilt, GCR, tracker and backtracking settings', '<div id="pvGeo"></div>', '', 'mb')}
     <div class="grid" style="grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)">
       ${card('Energy loss diagram', 'Annual, PVsyst sequence', lossRows(lt.rows) + `<div class="small muted mt">Night auxiliary import ${fmt(lt.night, 2)} kWh/kWp·yr (not deducted). Values per year averaged over the dataset; KPIs use the ${S.res.basis === 'tmy' ? 'TMY' : 'selected year'}.</div>`)}
       <div class="grid">
@@ -524,6 +526,8 @@
       ${card('Hourly output heatmap', '8760 h · day of year × local hour', '<div class="chart" id="chPvH"></div>')}
       ${card('Yield per weather year & exceedance', '', '<div class="chart short" id="chPvY"></div>' + exTable(ex, 'kWh/kWp'))}
     </div>`;
+    TRE_SCENE.pvGeometry($('#pvGeo'), S.pv, S.site.lat);
+    countUp(out);
     const t = theme();
     const mE = [], mPR = [], mPOA = [];
     for (let m = 1; m <= 12; m++) { let e = 0, p = 0; for (let h = 0; h < 8760; h++) if (CAL.month[h] === m) { e += prof[h]; p += R.re.prof.poa[h] / 1000; } mE.push(+e.toFixed(1)); mPR.push(+(p > 0 ? e / p * 100 : 0).toFixed(1)); mPOA.push(+p.toFixed(1)); }
@@ -613,13 +617,15 @@
       ${kpi('P90 (1-year)', fmt(ex.P90_1y, 0), 'MWh/MW', `IAV ${pct(ex.iav)} · unc. ${fmt(S.prof.uncWind, 1)}%`, 'var(--gold)')}
     </div>
     <div class="grid g2">
-      ${card('Power curve', `Standard vs site air density`, '<div class="chart" id="chPc"></div>')}
+      ${card('Vertical wind profile', 'Power-law shear from the dual-height data · rotor swept area shaded · rotor speed follows hub wind', windProfileSvg(wr, vh), '', 'span2')}
       ${card('Energy loss cascade', 'Annual, per MW installed', lossRows(windLossRows(L, ny)))}
+      ${card('Power curve', `Standard vs site air density`, '<div class="chart" id="chPc"></div>')}
       ${card('Monthly capacity factor & wind speed', '', '<div class="chart" id="chWm"></div>')}
       ${card('Wind speed distribution at hub', 'Histogram with fitted Weibull', '<div class="chart" id="chWb"></div>')}
       ${card('Hourly output heatmap', '8760 h · day of year × local hour', '<div class="chart" id="chWh"></div>')}
       ${card('Yield per weather year & exceedance', '', '<div class="chart short" id="chWy"></div>' + exTable(ex, 'MWh/MW'))}
     </div>`;
+    countUp(out);
     const t = theme(), pc = wr.curve;
     const std = [], site = [], f = Math.cbrt(wr.meanRho / 1.225);
     for (let v = 0; v <= 30; v += 0.5) { std.push([v, +(TRE.curveAt(pc, v) / 1000).toFixed(3)]); site.push([v, +(TRE.curveAt(pc, v * f) / 1000).toFixed(3)]); }
@@ -636,6 +642,27 @@
       series: [{ name: 'Hours', type: 'bar', data: hist, barWidth: '86%', itemStyle: { color: t.wind, opacity: .75, borderRadius: [3, 3, 0, 0] } }, { name: `Weibull k=${fmt(wb.k, 2)}`, type: 'line', data: pdf, smooth: true, symbol: 'none', lineStyle: { color: t.curt, width: 2 }, itemStyle: { color: t.curt } }] }));
     heat8760('chWh', prof, 100, ['#F3F8FE', '#CDE6FB', '#9CCBF5', '#6FAEEA', '#7C6CF2'], '% kW');
     yieldYears('chWy', R.re.annual.map(a => [a.year, a.wind]), t.wind, aep);
+  }
+  function windProfileSvg(wr, vh) {
+    const href = R.weather.hHi || 100, hub = S.wind.hub;
+    const alpha = S.wind.shearMode === 'fixed' ? S.wind.alphaFixed : wr.shear.mean;
+    const vref = mean(vh) / Math.pow(hub / href, alpha);
+    return TRE_SCENE.windProfile(vref, alpha, hub, wr.curve.D || 140, href);
+  }
+  const kpiPrev = new Map();
+  function countUp(root) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    $$('.kpi', root).forEach(k => {
+      const lab = k.querySelector('.l').textContent, v = k.querySelector('.v'); const node = v.firstChild;
+      if (!node || node.nodeType !== 3) return;
+      const m = node.textContent.match(/^(-?[\d,]*\.?\d+)(.*)$/); if (!m) return;
+      const target = parseFloat(m[1].replace(/,/g, '')), dec = (m[1].split('.')[1] || '').length, suffix = m[2];
+      const from = kpiPrev.has(lab) ? kpiPrev.get(lab) : target * 0.6; kpiPrev.set(lab, target);
+      if (from === target) return;
+      const t0 = performance.now(), dur = 650;
+      const step = (now) => { const q = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - q, 3); node.textContent = fmt(from + (target - from) * e, dec) + suffix; if (q < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
   }
   function windLossRows(L, ny) {
     const y = (x) => x / ny, rows = [];
@@ -714,6 +741,7 @@
         ${card('Monthly energy', 'GWh at plant capacities', '<div class="chart" id="chHyM"></div>')}
         ${card('Weekly time series', 'Drag the slider to scan the year', '<div class="chart" id="chWk"></div>')}
       </div>`;
+    countUp(document);
     const t = theme();
     const diur = (m) => {
       const s = new Array(24).fill(0), w = new Array(24).fill(0); let n = 0;
@@ -822,6 +850,7 @@
       ${card('Product tank & offtake ledger', `Operating year from ${c.Analysis_Day_start}/${c.Analysis_Month_start} · ${esc(c.Derivative_Offtake_Frequency)} lifting`, ledgerTable(r.tank.ledger), `<button class="btn sm" id="btnExpPlant">${IC.dl}Hourly results .xlsx</button>`)}
     </div>
     <div class="small muted mt">Simulation: 8,760 h + 72 h cyclic warm-up in ${fmt(r.ms, 0)} ms · max busbar imbalance ${a.balanceErr.toExponential(1)} MW · electrolyser loading order ${r.derived.ORDER.join(' → ')} · PEM ${fmt(r.derived.PEM_D, 0)} MW / ALK ${fmt(r.derived.ALK_D, 0)} MW.</div>`;
+    countUp(document);
     $('#btnExpPlant').onclick = exportPlant;
     $('#plTop').innerHTML = card('Live process flow', 'Annual averages from the simulation · rotor and flow animation follow the site wind and loop utilisation', `<div class="pfdwrap" style="${animVars()}">${TRE_SCENE.processDiagram(pfdData(r))}</div>`, '', 'mb');
     const t = theme(), H = r.hourly;
@@ -959,6 +988,7 @@
     </div>
     ${card('Project cash flows', 'Crore INR, nominal', '<div class="chart" id="chCf"></div>', '', 'mt')}
     <div class="note mt">Screening economics consistent with the unit rates and conventions of <code>financial_model.py</code> (CRF-levelised cost, straight-line book depreciation for tax, equal-principal debt). Use the Python model for the lender-grade schedule (WDV tax depreciation, MAT, DSRA, working capital, sculpting).</div>`;
+    countUp(document);
     const t = theme();
     const pal = { 'Solar PV': t.solar, 'Wind': t.wind, 'BESS': t.bess, 'Electrolyser - PEM': '#8FDCC3', 'Electrolyser - Alkaline': t.h2, 'H2 Storage': '#B7EBDA', 'Ammonia Loop': t.nh3, 'BOP': '#B8BFD6', 'Others': '#CFD3E3', 'Evacuation': '#F4C35E' };
     const items = Object.entries(f.sec).filter(([, v]) => v > 0).map(([k, v]) => ({ name: k, value: +v.toFixed(1), itemStyle: { color: pal[k] } }));
