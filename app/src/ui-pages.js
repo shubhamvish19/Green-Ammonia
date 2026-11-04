@@ -10,14 +10,14 @@
   const mean = (a) => a.length ? sum(a) / a.length : 0;
 
   const PAGES = [
-    { id: 'site', title: 'Site & Resource', icon: 'site', crumb: 'Step 1 · Location and meteorological resource' },
-    { id: 'pv', title: 'Solar PV Design', icon: 'sun', crumb: 'Step 2 · PVsyst-type energy yield model' },
-    { id: 'wind', title: 'Wind Farm Design', icon: 'wind', crumb: 'Step 3 · Power-curve energy yield model' },
-    { id: 'profile', title: 'RE Profile & Export', icon: 'wave', crumb: 'Step 4 · Hourly 8760 generation profile' },
-    { id: 'plant', title: 'Plant Simulation', icon: 'plant', crumb: 'Step 5 · Hourly green hydrogen / ammonia dispatch' },
-    { id: 'econ', title: 'Economics', icon: 'coin', crumb: 'Step 6 · Screening project economics' },
-    { id: 'explore', title: 'Sizing Explorer', icon: 'grid', crumb: 'Optimisation · Sizing maps and sensitivity' },
-    { id: 'docs', title: 'Methodology', icon: 'book', crumb: 'Reference · Models, data sources and file formats' }
+    { id: 'site', title: 'Site & Resource', icon: 'site', crumb: 'Step 1 of 6', c: '#9284F7', cs: '#EEEBFF', h: ['#E9E4FF', '#DDF0FF'], desc: 'Locate the project and build a bankable meteorological year from ERA5 or NASA POWER, or bring your own hourly profile.' },
+    { id: 'pv', title: 'Solar PV Design', icon: 'sun', crumb: 'Step 2 of 6', c: '#F5A65B', cs: '#FFF1E2', h: ['#FFEBD8', '#FFF6DB'], hc: '#E08A3C', desc: 'PVsyst-type energy yield: transposition, shading, IAM, soiling, thermal, bifacial, DC/AC and evacuation losses — every coefficient editable.' },
+    { id: 'wind', title: 'Wind Farm Design', icon: 'wind', crumb: 'Step 3 of 6', c: '#5EAEEB', cs: '#E6F3FD', h: ['#DDF0FF', '#E3F7F0'], hc: '#3D8FCC', desc: 'Hub-height extrapolation with a month × hour shear matrix, IEC density correction, turbine power curves and EYA loss categories.' },
+    { id: 'profile', title: 'RE Profile & Export', icon: 'wave', crumb: 'Step 4 of 6', c: '#4CC3A0', cs: '#E3F7F0', h: ['#DFF6EE', '#EEEBFF'], hc: '#2FA582', desc: 'Combine sources, choose the exceedance level and exchange the model-ready 8760 h efficiency workbook.' },
+    { id: 'plant', title: 'Plant Simulation', icon: 'plant', crumb: 'Step 5 of 6', c: '#EF86AE', cs: '#FDEAF2', h: ['#FDE6F0', '#EEEBFF'], hc: '#D9638F', desc: 'Hourly busbar dispatch of the electrolyser fleet, batteries, hydrogen buffer, ammonia loop, product tank and offtake.' },
+    { id: 'econ', title: 'Economics', icon: 'coin', crumb: 'Step 6 of 6', c: '#F4C35E', cs: '#FFF7E3', h: ['#FFF4D6', '#FFE9DD'], hc: '#C9932A', desc: 'Screening CAPEX, OPEX, levelised cost of ammonia and hydrogen, project and equity returns.' },
+    { id: 'explore', title: 'Sizing Explorer', icon: 'grid', crumb: 'Optimisation', c: '#7C9CF5', cs: '#E8EEFF', h: ['#E4EBFF', '#F1E8FF'], hc: '#5B7BE0', desc: 'Two-parameter sizing maps and tornado sensitivity — every cell is a full hourly simulation with economics.' },
+    { id: 'docs', title: 'Methodology', icon: 'book', crumb: 'Reference', c: '#A3ACC7', cs: '#EEF0F6', h: ['#EEF0F6', '#EEEBFF'], hc: '#6E7899', desc: 'Models, data sources, conventions and file formats used throughout the studio.' }
   ];
 
   /* =================================================================
@@ -92,7 +92,7 @@
    *  NAVIGATION / CHROME
    * ================================================================= */
   function buildNav() {
-    $('#nav').innerHTML = PAGES.map((p, i) => `<button data-page="${p.id}">${IC[p.icon]}<span>${p.title}</span>${i < 6 ? `<span class="step" data-step="${p.id}">${i + 1}</span>` : ''}</button>`).join('');
+    $('#nav').innerHTML = PAGES.map((p, i) => `${i === 6 ? '<div class="navlab" style="margin-top:12px">Analysis</div>' : ''}<button data-page="${p.id}" style="--c:${p.c};--c-soft:${p.cs}"><span class="ni">${IC[p.icon]}</span><span>${p.title}</span>${i < 6 ? `<span class="step" data-step="${p.id}">${i + 1}</span>` : ''}</button>`).join('');
     $('#nav').addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) go(b.dataset.page); });
   }
   const rendered = {};
@@ -101,14 +101,42 @@
     const p = PAGES.find(x => x.id === id) || PAGES[0];
     $$('.nav button').forEach(b => b.classList.toggle('active', b.dataset.page === p.id));
     $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + p.id));
-    $('#pageTitle').textContent = p.title; $('#crumb').textContent = p.crumb;
+    $('#pageTitle').textContent = p.title; $('#crumb').textContent = p.crumb; hero(p);
     $('#side').classList.remove('open');
     if (!rendered[p.id]) { RENDER[p.id](); rendered[p.id] = true; }
     UPDATE[p.id] && UPDATE[p.id]();
     window.scrollTo({ top: 0 });
   }
+  function hero(p) {
+    p = p || PAGES.find(x => x.id === S.page) || PAGES[0];
+    const st = heroStats(p.id);
+    let box = $('#phero .phero');
+    if (!box) { $('#phero').innerHTML = `<div class="phero"><div class="tx"></div>${window.TRE_SCENE ? TRE_SCENE.svg() : ''}</div>`; box = $('#phero .phero'); }
+    box.style.cssText = `--h1:${p.h[0]};--h2:${p.h[1]};--hc:${p.hc || p.c};${animVars()}`;
+    box.querySelector('.tx').innerHTML = `<span class="eyebrow">${p.crumb}</span><h2>${p.title}</h2><p>${p.desc}</p>${st.length ? `<div class="stats">${st.map(([l, v]) => `<div class="stat"><small>${l}</small><b>${v}</b></div>`).join('')}</div>` : ''}`;
+  }
+  function animVars() {
+    // rotor period from mean hub wind (≈ tip-speed scaled), flow speed from NH3 output
+    let v = 6.5;
+    if (R.re) v = mean(R.re.prof.vhub);
+    else if (R.profile) v = 4 + mean(R.profile.wind) / 6;
+    const rot = Math.max(1.6, Math.min(14, 34 / Math.max(1, v)));
+    const util = R.plant ? R.plant.annual.loopUtil / 100 : 0.7;
+    const flow = Math.max(0.8, Math.min(4, 2.4 / Math.max(0.2, util)));
+    return `--rot:${rot.toFixed(2)}s;--flow:${flow.toFixed(2)}s;--flowh:${(flow * 0.9).toFixed(2)}s;--flown:${(flow * 1.1).toFixed(2)}s`;
+  }
+  function heroStats(id) {
+    const out = [];
+    if (id === 'site') { out.push(['Coordinates', `${fmt(S.site.lat, 3)}°, ${fmt(S.site.lon, 3)}°`]); if (R.re) out.push(['GHI', fmt(sum(R.re.prof.ghi) / 1000, 0) + ' kWh/m²']); }
+    if (id === 'pv' && R.re) { out.push(['Specific yield', fmt(sum(R.re.prof.solar), 0) + ' kWh/kWp']); out.push(['Mounting', S.pv.mounting === 'tracker' ? 'Tracker' : `Fixed ${S.pv.tilt}°`]); }
+    if (id === 'wind' && R.re) { out.push(['Net CF', pct(sum(R.re.prof.wind) / 8760)]); out.push(['Hub', S.wind.hub + ' m']); }
+    if ((id === 'profile' || id === 'plant') && R.profile) out.push(['RE capacity', `${fmt(S.plant.Solar_Capacity_MWp)} + ${fmt(S.plant.Wind_Capacity_MWp)} MW`]);
+    if (id === 'plant' && R.plant) out.push(['NH₃ output', fmt(R.plant.annual.nh3 / 1000, 1) + ' kt/yr']);
+    if ((id === 'econ' || id === 'explore') && R.fin) { out.push(['LCOA', fmt(R.fin.lcoa, 1) + ' INR/kg']); out.push(['Project cost', fmt(R.fin.capex, 0) + ' Cr']); }
+    return out;
+  }
   function refresh() {
-    chrome();
+    chrome(); hero();
     const id = S.page; if (UPDATE[id]) UPDATE[id]();
   }
   function chrome() {
@@ -130,10 +158,10 @@
   function renderSite() {
     const el = $('#page-site');
     const tiles = [
-      ['openmeteo', IC.sat, '#E6F2E2', '#2E7D32', 'ERA5 reanalysis', 'Open-Meteo archive · ECMWF ERA5 · 1940–present · 10 m & 100 m wind'],
-      ['nasa', IC.globe, '#E5EEFB', '#3A5BA0', 'NASA POWER', 'CERES SYN1deg irradiance + MERRA-2 · 2001–present · 10 m & 50 m wind'],
-      ['upload', IC.file, '#FFF6D6', '#8A6500', 'Excel / PVsyst file', 'Hourly efficiency template, PVsyst E_Grid or renewables.ninja export'],
-      ['sample', IC.layers, '#F1ECFF', '#6D4AFF', 'Sample project', 'Damoh (MP) — PVsyst 500 MWp solar & renewables.ninja wind']
+      ['openmeteo', IC.sat, '#EEEBFF', '#7C6CF2', 'ERA5 reanalysis', 'Open-Meteo archive · ECMWF ERA5 · 1940–present · 10 m & 100 m wind'],
+      ['nasa', IC.globe, '#E6F3FD', '#3D8FCC', 'NASA POWER', 'CERES SYN1deg irradiance + MERRA-2 · 2001–present · 10 m & 50 m wind'],
+      ['upload', IC.file, '#FFF1E2', '#E08A3C', 'Excel / PVsyst file', 'Hourly efficiency template, PVsyst E_Grid or renewables.ninja export'],
+      ['sample', IC.layers, '#FDEAF2', '#D9638F', 'Sample project', 'Damoh (MP) — PVsyst 500 MWp solar & renewables.ninja wind']
     ];
     el.innerHTML = `
     <div class="hero">
@@ -325,7 +353,7 @@
     const bins = [0, 3, 5, 7, 9, 12], names = ['0–3', '3–5', '5–7', '7–9', '9–12', '≥12 m/s'], dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     const rose = names.map(() => new Array(16).fill(0));
     for (let h = 0; h < 8760; h++) { const d = Math.floor(((pr.wdir[h] + 11.25) % 360) / 22.5); let b = 0; while (b < 5 && pr.vhub[h] >= bins[b + 1]) b++; rose[b][d]++; }
-    const roseCol = ['#CFE8E9', '#9AD1D4', '#5FB8BD', '#2C9AA1', '#0E7C83', '#0A5A60'];
+    const roseCol = ['#E3F1FD', '#C3E1FB', '#9CCBF5', '#7DB6EE', '#9D8CF7', '#7C6CF2'];
     chart('chRose', { ...baseOpt(), tooltip: { trigger: 'item', formatter: (p) => `${p.name} · ${p.seriesName}: ${(p.value / 87.6).toFixed(1)} %` }, polar: { radius: ['8%', '72%'], center: ['50%', '54%'] },
       angleAxis: { type: 'category', data: dirs, startAngle: 90 + 11.25, axisLabel: { color: t.text, fontSize: 10 }, axisLine: { lineStyle: { color: t.border } } },
       radiusAxis: { axisLabel: { show: false }, splitLine: { lineStyle: { color: t.grid } }, axisLine: { show: false } },
@@ -338,7 +366,7 @@
     const heat = (k) => {
       const M = []; let mx = 0, mn = 1e9;
       for (let m = 0; m < 12; m++) for (let h = 0; h < 24; h++) { let s = 0, n = 0; for (let d = 0; d < 8760; d++) if (CAL.month[d] === m + 1 && CAL.hour[d] === h) { s += pr[k][d]; n++; } const v = s / n; M.push([h, m, +v.toFixed(2)]); mx = Math.max(mx, v); mn = Math.min(mn, v); }
-      const cols = k === 'ghi' ? ['#FFF8E1', '#FFD54F', '#F2B705', '#E07B00', '#A63D00'] : k === 'vhub' ? ['#EAF6F6', '#9AD1D4', '#2C9AA1', '#0A5A60', '#062E33'] : ['#2B6CB0', '#9AC5E6', '#FFF3C4', '#F59E5B', '#C2412D'];
+      const cols = k === 'ghi' ? ['#FFF8EC', '#FFE3BD', '#FFC98E', '#F5A65B', '#E5824A'] : k === 'vhub' ? ['#F1F8FF', '#CDE6FB', '#9CCBF5', '#6FAEEA', '#7C6CF2'] : ['#9CCBF5', '#CFE6F8', '#FFF4D6', '#FFC3A8', '#FF8A7A'];
       chart('chHeatRes', { ...baseOpt(), tooltip: { formatter: (p) => `${MONTHS[p.value[1]]} ${String(p.value[0]).padStart(2, '0')}:00 — ${p.value[2]} ${k === 'ghi' ? 'W/m²' : k === 'vhub' ? 'm/s' : '°C'}` },
         grid: { left: 40, right: 70, top: 14, bottom: 30 }, xAxis: { type: 'category', data: [...Array(24).keys()], axisLabel: { color: t.text, fontSize: 10 }, axisLine: { lineStyle: { color: t.border } } },
         yAxis: { type: 'category', data: MONTHS, inverse: true, axisLabel: { color: t.text, fontSize: 10 }, axisLine: { lineStyle: { color: t.border } } },
@@ -500,12 +528,12 @@
     const mE = [], mPR = [], mPOA = [];
     for (let m = 1; m <= 12; m++) { let e = 0, p = 0; for (let h = 0; h < 8760; h++) if (CAL.month[h] === m) { e += prof[h]; p += R.re.prof.poa[h] / 1000; } mE.push(+e.toFixed(1)); mPR.push(+(p > 0 ? e / p * 100 : 0).toFixed(1)); mPOA.push(+p.toFixed(1)); }
     chart('chPvM', baseOpt({ xAxis: { type: 'category', data: MONTHS }, yAxis: [{ type: 'value', name: 'kWh/kWp' }, { type: 'value', name: 'PR %', min: 50, max: 100, splitLine: { show: false } }], grid: { left: 50, right: 46, top: 52, bottom: 30 },
-      series: [{ name: 'E_Grid', type: 'bar', data: mE, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#FFC83D' }, { offset: 1, color: t.solar }] }, borderRadius: [5, 5, 0, 0] } },
+      series: [{ name: 'E_Grid', type: 'bar', data: mE, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#FFD3A3' }, { offset: 1, color: t.solar }] }, borderRadius: [5, 5, 0, 0] } },
         { name: 'POA (kWh/m²)', type: 'line', data: mPOA, itemStyle: { color: t.grid2 }, lineStyle: { type: 'dashed' }, symbol: 'none' }, { name: 'PR', type: 'line', yAxisIndex: 1, data: mPR, itemStyle: { color: t.green }, smooth: true, symbolSize: 6 }] }));
     const ser = [];
     for (let m = 0; m < 12; m++) { const d = new Array(24).fill(0); let n = 0; for (let h = 0; h < 8760; h++) if (CAL.month[h] === m + 1) { d[CAL.hour[h]] += prof[h] * 100; if (CAL.hour[h] === 0) n++; } ser.push({ name: MONTHS[m], type: 'line', smooth: true, symbol: 'none', data: d.map(x => +(x / n).toFixed(2)), lineStyle: { width: 1.6 } }); }
-    chart('chPvD', baseOpt({ color: ['#2B6CB0', '#3A7FC2', '#5BA0C8', '#E8A600', '#F2B705', '#FFD23F', '#9BC53D', '#6BAA3A', '#4F9A5A', '#D9822B', '#B85C38', '#4A5FA8'], xAxis: { type: 'category', data: [...Array(24).keys()], name: 'h' }, yAxis: { type: 'value', name: '% kWp' }, legend: { type: 'scroll', top: 2, textStyle: { color: t.text, fontSize: 10 } }, grid: { left: 46, right: 18, top: 52, bottom: 28 }, series: ser }));
-    heat8760('chPvH', prof, 100, ['#0E1A12', '#3A2E05', '#8A6500', '#F2B705', '#FFE38A'], '% kWp');
+    chart('chPvD', baseOpt({ color: ['#9CCBF5', '#8FB8F2', '#9D8CF7', '#C49CF0', '#EF86AE', '#FF8A7A', '#F5A65B', '#F4C35E', '#9BDB8F', '#4CC3A0', '#5EAEEB', '#7C9CF5'], xAxis: { type: 'category', data: [...Array(24).keys()], name: 'h' }, yAxis: { type: 'value', name: '% kWp' }, legend: { type: 'scroll', top: 2, textStyle: { color: t.text, fontSize: 10 } }, grid: { left: 46, right: 18, top: 52, bottom: 28 }, series: ser }));
+    heat8760('chPvH', prof, 100, ['#F4F2FB', '#FFE7CC', '#FFC98E', '#F5A65B', '#E5824A'], '% kWp');
     yieldYears('chPvY', R.re.annual.map(a => [a.year, a.solar]), t.solar, yld);
   }
   function heat8760(id, arr, scale, cols, unit) {
@@ -601,12 +629,12 @@
     const mCF = [], mV = [];
     for (let m = 1; m <= 12; m++) { let e = 0, v = 0, n = 0; for (let h = 0; h < 8760; h++) if (CAL.month[h] === m) { e += prof[h]; v += vh[h]; n++; } mCF.push(+(e / n * 100).toFixed(1)); mV.push(+(v / n).toFixed(2)); }
     chart('chWm', baseOpt({ xAxis: { type: 'category', data: MONTHS }, yAxis: [{ type: 'value', name: 'CF %' }, { type: 'value', name: 'm/s', splitLine: { show: false } }], grid: { left: 46, right: 44, top: 52, bottom: 30 },
-      series: [{ name: 'Net CF', type: 'bar', data: mCF, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#39B5BC' }, { offset: 1, color: t.wind }] }, borderRadius: [5, 5, 0, 0] } }, { name: 'Hub speed', type: 'line', yAxisIndex: 1, data: mV, smooth: true, itemStyle: { color: t.nh3 } }] }));
+      series: [{ name: 'Net CF', type: 'bar', data: mCF, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#B9DDF8' }, { offset: 1, color: t.wind }] }, borderRadius: [5, 5, 0, 0] } }, { name: 'Hub speed', type: 'line', yAxisIndex: 1, data: mV, smooth: true, itemStyle: { color: t.nh3 } }] }));
     const hist = new Array(30).fill(0); for (const v of vh) hist[Math.min(29, Math.floor(v))]++;
     const pdf = []; for (let v = 0.5; v < 30; v += 1) pdf.push(+(8760 * (wb.k / wb.A) * Math.pow(v / wb.A, wb.k - 1) * Math.exp(-Math.pow(v / wb.A, wb.k))).toFixed(1));
     chart('chWb', baseOpt({ xAxis: { type: 'category', data: hist.map((_, i) => `${i}`), name: 'm/s' }, yAxis: { type: 'value', name: 'hours' }, grid: { left: 50, right: 30, top: 52, bottom: 34 },
       series: [{ name: 'Hours', type: 'bar', data: hist, barWidth: '86%', itemStyle: { color: t.wind, opacity: .75, borderRadius: [3, 3, 0, 0] } }, { name: `Weibull k=${fmt(wb.k, 2)}`, type: 'line', data: pdf, smooth: true, symbol: 'none', lineStyle: { color: t.curt, width: 2 }, itemStyle: { color: t.curt } }] }));
-    heat8760('chWh', prof, 100, ['#F2FAFA', '#9AD1D4', '#2C9AA1', '#0A5A60', '#04282B'], '% kW');
+    heat8760('chWh', prof, 100, ['#F3F8FE', '#CDE6FB', '#9CCBF5', '#6FAEEA', '#7C6CF2'], '% kW');
     yieldYears('chWy', R.re.annual.map(a => [a.year, a.wind]), t.wind, aep);
   }
   function windLossRows(L, ny) {
@@ -757,7 +785,7 @@
     ]);
   }
   function renderPlant() {
-    $('#page-plant').innerHTML = `<div class="split"><div class="sticky" id="plForm">${plantForm()}</div><div id="plOut"></div></div>`;
+    $('#page-plant').innerHTML = `<div id="plTop"></div><div class="split"><div class="sticky" id="plForm">${plantForm()}</div><div id="plOut"></div></div>`;
     bindCase();
   }
   function bindCase() {
@@ -769,7 +797,7 @@
   }
   function updatePlant() {
     const out = $('#plOut'); if (!out) return;
-    if (!R.plant) { out.innerHTML = `<div class="card">${emptyState('No RE profile available', 'Load site data, upload an efficiency workbook or use the sample profile to run the hourly simulation.', `<button class="btn gold" onclick="TRE_APP.useSample()">${IC.play}Run with sample profile</button>`)}</div>`; return; }
+    if (!R.plant) { $('#plTop').innerHTML = ''; out.innerHTML = `<div class="card">${emptyState('No RE profile available', 'Load site data, upload an efficiency workbook or use the sample profile to run the hourly simulation.', `<button class="btn gold" onclick="TRE_APP.useSample()">${IC.play}Run with sample profile</button>`)}</div>`; return; }
     const r = R.plant, a = r.annual, c = r.cfg;
     const ful = a.offtakeDue > 0 ? a.offtakeDispatched / a.offtakeDue : 1;
     out.innerHTML = `
@@ -795,6 +823,7 @@
     </div>
     <div class="small muted mt">Simulation: 8,760 h + 72 h cyclic warm-up in ${fmt(r.ms, 0)} ms · max busbar imbalance ${a.balanceErr.toExponential(1)} MW · electrolyser loading order ${r.derived.ORDER.join(' → ')} · PEM ${fmt(r.derived.PEM_D, 0)} MW / ALK ${fmt(r.derived.ALK_D, 0)} MW.</div>`;
     $('#btnExpPlant').onclick = exportPlant;
+    $('#plTop').innerHTML = card('Live process flow', 'Annual averages from the simulation · rotor and flow animation follow the site wind and loop utilisation', `<div class="pfdwrap" style="${animVars()}">${TRE_SCENE.processDiagram(pfdData(r))}</div>`, '', 'mb');
     const t = theme(), H = r.hourly;
     // sankey
     const bessLoss = a.bessCharge - a.bessDisch;
@@ -804,14 +833,14 @@
     L('Solar PV', 'RE busbar', a.solar); L('Wind', 'RE busbar', a.wind);
     L('RE busbar', 'Electrolysers', a.ely); L('RE busbar', 'NH₃ loop aux', a.aux); L('RE busbar', 'BESS losses', Math.max(0, bessLoss)); L('RE busbar', 'Curtailed', a.curtailed); L('RE busbar', 'Bank charges', a.bankTariff);
     L('Electrolysers', 'Green H₂', a.h2 * 33.33); L('Electrolysers', 'Conversion heat', a.ely - a.h2 * 33.33); L('Green H₂', 'Ammonia', a.h2 * 33.33);
-    const nc = { 'Solar PV': t.solar, 'Wind': t.wind, 'RE busbar': t.green, 'Electrolysers': t.h2, 'NH₃ loop aux': t.nh3, 'BESS losses': t.bess, 'Curtailed': t.curt, 'Bank charges': t.grid2, 'Green H₂': '#5FB760', 'Ammonia': t.nh3, 'Conversion heat': '#B0B8B3' };
+    const nc = { 'Solar PV': t.solar, 'Wind': t.wind, 'RE busbar': t.green, 'Electrolysers': t.h2, 'NH₃ loop aux': t.nh3, 'BESS losses': t.bess, 'Curtailed': t.curt, 'Bank charges': t.grid2, 'Green H₂': '#8FDCC3', 'Ammonia': t.nh3, 'Conversion heat': '#D7D3E6' };
     chart('chSankey', { ...baseOpt(), tooltip: { trigger: 'item', formatter: (p) => p.dataType === 'edge' ? `${p.data.source} → ${p.data.target}: ${fmt(p.data.value)} MWh` : `${p.name}` },
-      series: [{ type: 'sankey', left: 8, right: 118, top: 16, bottom: 16, nodeWidth: 16, nodeGap: 14, nodeAlign: 'justify', emphasis: { focus: 'adjacency' }, data: nodes.filter(n => links.some(l => l.source === n.name || l.target === n.name)).map(n => ({ ...n, itemStyle: { color: nc[n.name] } })), links,
+      series: [{ type: 'sankey', left: 36, right: 118, top: 30, bottom: 16, nodeWidth: 16, nodeGap: 14, nodeAlign: 'justify', emphasis: { focus: 'adjacency' }, data: nodes.filter(n => links.some(l => l.source === n.name || l.target === n.name)).map(n => ({ ...n, itemStyle: { color: nc[n.name] }, label: links.some(l => l.source === n.name) ? { position: 'top', formatter: (p) => p.name } : {} })), links,
         label: { color: t.textMain, fontSize: 11, position: 'right', formatter: (p) => `${p.name}\n{v|${fmt(p.value / 1000, 1)} GWh}`, rich: { v: { color: t.text, fontSize: 10 } } }, lineStyle: { color: 'gradient', opacity: .35, curveness: .5 } }] });
     const ob = c.Derivative_Obligation_TPM;
-    chart('chPlM', baseOpt({ xAxis: { type: 'category', data: MONTHS }, yAxis: { type: 'value', name: 't' }, grid: { left: 56, right: 18, top: 52, bottom: 30 },
+    chart('chPlM', baseOpt({ xAxis: { type: 'category', data: MONTHS }, yAxis: { type: 'value' }, grid: { left: 56, right: 18, top: 64, bottom: 30 },
       series: [{ name: 'Production', type: 'bar', data: r.monthly.map(m => +m.nh3.toFixed(0)), itemStyle: { color: t.nh3, borderRadius: [4, 4, 0, 0] } },
-        { name: 'Dispatched to offtaker', type: 'bar', data: r.monthly.map(m => +m.lifted.toFixed(0)), itemStyle: { color: t.green, borderRadius: [4, 4, 0, 0] } },
+        { name: 'Dispatched', type: 'bar', data: r.monthly.map(m => +m.lifted.toFixed(0)), itemStyle: { color: t.green, borderRadius: [4, 4, 0, 0] } },
         { name: 'Shortfall', type: 'bar', data: r.monthly.map(m => +m.short.toFixed(0)), itemStyle: { color: t.curt, borderRadius: [4, 4, 0, 0] } },
         { name: 'Obligation', type: 'line', data: new Array(12).fill(ob), symbol: 'none', lineStyle: { type: 'dashed', color: t.gold, width: 2 }, itemStyle: { color: t.gold } }] }));
     // dispatch
@@ -841,6 +870,13 @@
     chart('chDay', baseOpt({ xAxis: { type: 'category', data: dl, axisLabel: { interval: 30, fontSize: 10 } }, yAxis: { type: 'value', name: 't/day' }, grid: { left: 50, right: 18, top: 52, bottom: 30 },
       visualMap: { show: false, dimension: 1, pieces: [{ lt: c.Derivative_Normal_MTPD * 0.5, color: t.curt }, { gte: c.Derivative_Normal_MTPD * 0.5, lt: c.Derivative_Normal_MTPD * 0.95, color: t.gold }, { gte: c.Derivative_Normal_MTPD * 0.95, color: t.nh3 }] },
       series: [{ name: 'NH₃', type: 'bar', data: day, barWidth: '90%' }, { name: 'Normal rate', type: 'line', data: new Array(365).fill(c.Derivative_Normal_MTPD), symbol: 'none', lineStyle: { type: 'dashed', color: t.textMain, width: 1 } }] }));
+  }
+  function pfdData(r) {
+    const a = r.annual, c = r.cfg, H = r.hourly;
+    let soc = 0; if (c.BESS_Total_MWh > 0) { for (let i = 0; i < 8760; i++) soc += (H.BD_e[i] + H.BE_e[i]) / c.BESS_Total_MWh; soc /= 8760; }
+    return { re: `${fmt(a.re / 1000, 0)} GWh/yr`, bess: `${fmt(c.BESS_Total_MWh)} MWh · ${pct(soc, 0)} SOC`, ely: `${fmt(c.Electrolyzer_Design_MW)} MW · CUF ${fmt(a.elyCUF, 0)}%`,
+      h2: `${fmt(a.h2, 0)} t/yr`, loop: `${fmt(c.Ammonia_Loop_Installed_Capacity)} MTPD · ${fmt(a.loopUtil, 0)}%`, nh3: `${fmt(a.nh3 / 365, 0)} t/day`,
+      tank: `${fmt(c.Derivative_Storage_Capacity_Ton)} t capacity`, offtake: `${pct(a.offtakeDue > 0 ? a.offtakeDispatched / a.offtakeDue : 1, 1)} fulfilled`, soc };
   }
   function ledgerTable(L) {
     const tot = L.reduce((s, x) => ({ prod: s.prod + x.prod, excess: s.excess + x.excess, due: s.due + x.due, lifted: s.lifted + x.lifted, short: s.short + x.short }), { prod: 0, excess: 0, due: 0, lifted: 0, short: 0 });
@@ -924,9 +960,9 @@
     ${card('Project cash flows', 'Crore INR, nominal', '<div class="chart" id="chCf"></div>', '', 'mt')}
     <div class="note mt">Screening economics consistent with the unit rates and conventions of <code>financial_model.py</code> (CRF-levelised cost, straight-line book depreciation for tax, equal-principal debt). Use the Python model for the lender-grade schedule (WDV tax depreciation, MAT, DSRA, working capital, sculpting).</div>`;
     const t = theme();
-    const pal = { 'Solar PV': t.solar, 'Wind': t.wind, 'BESS': t.bess, 'Electrolyser - PEM': '#4CAF50', 'Electrolyser - Alkaline': t.h2, 'H2 Storage': '#81C784', 'Ammonia Loop': t.nh3, 'BOP': '#7E8F9E', 'Others': '#B7C2BA', 'Evacuation': '#C9A227' };
+    const pal = { 'Solar PV': t.solar, 'Wind': t.wind, 'BESS': t.bess, 'Electrolyser - PEM': '#8FDCC3', 'Electrolyser - Alkaline': t.h2, 'H2 Storage': '#B7EBDA', 'Ammonia Loop': t.nh3, 'BOP': '#B8BFD6', 'Others': '#CFD3E3', 'Evacuation': '#F4C35E' };
     const items = Object.entries(f.sec).filter(([, v]) => v > 0).map(([k, v]) => ({ name: k, value: +v.toFixed(1), itemStyle: { color: pal[k] } }));
-    items.push({ name: 'Soft costs + land + IDC', value: +(f.soft + f.land + f.idc).toFixed(1), itemStyle: { color: '#D9C7A0' } });
+    items.push({ name: 'Soft costs + land + IDC', value: +(f.soft + f.land + f.idc).toFixed(1), itemStyle: { color: '#E4DDF5' } });
     chart('chCapex', { ...baseOpt(), tooltip: { trigger: 'item', formatter: '{b}: {c} Cr ({d}%)' }, legend: { type: 'scroll', orient: 'vertical', right: 0, top: 'middle', width: '38%', textStyle: { color: t.text, fontSize: 11 }, formatter: (n) => { const it = items.find(x => x.name === n); return `${n}  ${it ? fmt(it.value / f.capex * 100, 1) + '%' : ''}`; } },
       series: [{ type: 'pie', radius: ['38%', '62%'], center: ['26%', '52%'], itemStyle: { borderColor: t.surface, borderWidth: 2, borderRadius: 4 }, label: { show: false }, data: items }],
       title: { text: fmt(f.capex, 0), subtext: 'Crore INR', left: '25.5%', top: '44%', textAlign: 'center', textStyle: { color: t.textMain, fontSize: 20, fontWeight: 700 }, subtextStyle: { color: t.text, fontSize: 11 }, itemGap: 2 } });
@@ -992,8 +1028,8 @@
     chart('chMap', { ...baseOpt(), tooltip: { formatter: (p) => `${lab(E.x)}: ${fx(xs[p.value[0]])}<br>${lab(E.y)}: ${fx(ys[p.value[1]])}<br><b>${mName}: ${fmt(p.value[2], 2)}</b>` },
       grid: { left: 70, right: 80, top: 20, bottom: 56 }, xAxis: { type: 'category', data: xs.map(fx), name: lab(E.x), nameLocation: 'middle', nameGap: 32, axisLabel: { color: t.text }, nameTextStyle: { color: t.text } },
       yAxis: { type: 'category', data: ys.map(fx), name: lab(E.y), nameLocation: 'middle', nameGap: 52, axisLabel: { color: t.text }, nameTextStyle: { color: t.text } },
-      visualMap: { min: Math.min(...vals), max: Math.max(...vals), calculable: true, right: 4, top: 'center', textStyle: { color: t.text }, inRange: { color: dir === 'min' ? ['#1E8E4E', '#9BD08A', '#FFE38A', '#F59E5B', '#D9483B'] : ['#D9483B', '#F59E5B', '#FFE38A', '#9BD08A', '#1E8E4E'] } },
-      series: [{ type: 'heatmap', data, label: { show: nx * ny <= 100, fontSize: 10, color: '#13201A', formatter: (p) => p.value[2] == null ? '' : (Math.abs(p.value[2]) >= 1000 ? fmt(p.value[2] / 1000, 1) + 'k' : fmt(p.value[2], 1)) }, itemStyle: { borderColor: t.surface, borderWidth: 2, borderRadius: 4 } }] });
+      visualMap: { min: Math.min(...vals), max: Math.max(...vals), calculable: true, right: 4, top: 'center', textStyle: { color: t.text }, inRange: { color: dir === 'min' ? ['#7FDDBF', '#C6EEDF', '#FFF2CC', '#FFC3A8', '#FF8A7A'] : ['#FF8A7A', '#FFC3A8', '#FFF2CC', '#C6EEDF', '#7FDDBF'] } },
+      series: [{ type: 'heatmap', data, label: { show: nx * ny <= 100, fontSize: 10, color: '#3B3757', formatter: (p) => p.value[2] == null ? '' : (Math.abs(p.value[2]) >= 1000 ? fmt(p.value[2] / 1000, 1) + 'k' : fmt(p.value[2], 1)) }, itemStyle: { borderColor: t.surface, borderWidth: 2, borderRadius: 4 } }] });
     $('#mapInfo').textContent = `${nx * ny} simulations in ${fmt((performance.now() - t0) / 1000, 1)} s`;
     if (best) {
       $('#mapBest').innerHTML = `<div class="kpi" style="--accent:var(--gold)"><div class="l">Best ${esc(mName)}</div><div class="v">${fmt(best.v, 2)}</div><div class="s">${esc(lab(E.x))} = ${fx(best.x)}<br>${esc(lab(E.y))} = ${fx(best.y)}</div></div>

@@ -39,6 +39,14 @@
     target: P('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
     shield: P('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
     cable: P('<path d="M4 9a5 5 0 0 1 10 0v6a5 5 0 0 0 10 0"/><path d="M4 5v4M2 9h4"/>'),
+    compass: P('<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'),
+    gauge: P('<path d="M12 14l4-4"/><path d="M3.5 18a9 9 0 1 1 17 0"/>'),
+    cal: P('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+    pctI: P('<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>'),
+    ruler: P('<path d="M4 20 20 4l-3-3L1 17z" transform="translate(1.5 1.5) scale(.88)"/><path d="M8 13l2 2M11 10l2 2M14 7l2 2"/>'),
+    clock: P('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    trend: P('<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
+    hash: P('<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>'),
     inv: P('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9c1-2 2-2 3 0s2 2 3 0M8 15h8"/>')
   };
 
@@ -88,8 +96,15 @@
   }
   const getPath = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
   function setPath(path, v) { const ks = path.split('.'); let o = S; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = v; }
+  const KICON = { solar: 'sun', wind: 'wind', h2: 'drop', 'green-2': 'drop', nh3: 'flask', bess: 'bat', curt: 'bolt', gold: 'chart', grid: 'layers', warn: 'target', ok: 'check' };
   function kpi(label, value, unit, sub, accent) {
-    return `<div class="kpi" style="--accent:${accent || 'var(--green-2)'}"><div class="l">${label}</div><div class="v">${value}${unit ? `<small>${unit}</small>` : ''}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+    accent = accent || 'var(--green-2)';
+    const key = (accent.match(/--([a-z0-9-]+)/) || [])[1];
+    const KL = [[/irr|lco|price|cost|capex|dscr/i, 'coin'], [/shutdown|hours/i, 'clock'], [/curtail/i, 'bolt'], [/ghi|dni|irradiat|specific yield/i, 'sun'], [/wind|weibull|shear|density/i, 'wind'], [/temperature/i, 'temp'],
+      [/h₂/i, 'drop'], [/nh₃|ammonia|excess/i, 'flask'], [/ratio|cuf|utilisation|fulfil|factor|correlation/i, 'gauge'], [/peak|output|production|yield|energy|p90/i, 'trend'], [/dataset/i, 'cal'], [/clipping|loss/i, 'inv']];
+    const hit = KL.find(([re]) => re.test(label));
+    const ic = IC[hit ? hit[1] : (KICON[key] || 'chart')];
+    return `<div class="kpi" style="--accent:${accent}"><span class="ki">${ic}</span><div class="l">${label}</div><div class="v">${value}${unit ? `<small>${unit}</small>` : ''}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
   }
   function card(title, sub, body, tools, cls) {
     return `<div class="card ${cls || ''}"><div class="hd"><h3>${title}</h3>${sub ? `<span class="sub">${sub}</span>` : ''}${tools ? `<div class="tools">${tools}</div>` : ''}</div><div class="bd">${body}</div></div>`;
@@ -97,6 +112,29 @@
   const emptyState = (title, msg, btn) => `<div class="empty">${IC.layers}<h4>${title}</h4><div>${msg}</div>${btn || ''}</div>`;
 
   /* ---------------- forms ---------------- */
+  // contextual label icon: first matching rule wins (key + label + unit)
+  const FICON = [
+    [/price|cost|capex|opex|tariff|lakh|inr|cr\/|insurance|manpower|admin|subsid|incentive|equity|interest|gearing|tax|o&m|salvage/i, 'coin', '#E0A23A'],
+    [/lat|lon|place|location|project|elev/i, 'site', '#9284F7'],
+    [/tilt|azimuth|rotation|angle|axis|mounting/i, 'compass', '#7C9CF5'],
+    [/temp|thermal|°c|uc\b|uv\b|hot|cold/i, 'temp', '#FF8A7A'],
+    [/soil|albedo|irradiance|solar|pv\b|sun|horizon|iam|refractive|b₀|bifacial|rear|module|lid|transposition|gcr|ground cover/i, 'sun', '#F5A65B'],
+    [/wind|turbine|hub|shear|wake|cp\b|turbulence|density|cut-out|power curve/i, 'wind', '#5EAEEB'],
+    [/h₂|hydrogen|electroly|pem|alkaline|stack|water/i, 'drop', '#4CC3A0'],
+    [/bess|battery|soc|rte|c-rate/i, 'bat', '#EF86AE'],
+    [/nh₃|ammonia|loop|haber|offtake|tank|inventory|obligation|catalyst/i, 'flask', '#9284F7'],
+    [/bank|grid|transformer|line|ohmic|evacuation|poi|inverter|dc\/ac|aux|mismatch|electrical|cable/i, 'bolt', '#F4C35E'],
+    [/ramp|turndown|step|load|degrad|trend|escalat|ramp/i, 'trend', '#7C9CF5'],
+    [/year|period|month|day|tenor|life|moratorium|interval|horizon|hours|start|construction|draw/i, 'cal', '#8E86B8'],
+    [/effic|ratio|factor|share|%|availability|quality|uncertaint|exceed|weight|scale|calibrat/i, 'gauge', '#4CC3A0'],
+    [/capacity|mw|rating|size|mtpd|kwp/i, 'bolt', '#F5A65B'],
+    [/steps|from|to|metric|parameter/i, 'hash', '#A3ACC7']
+  ];
+  function ficon(key, label, unit) {
+    const txt = `${key} ${label} ${unit || ''}`;
+    for (const [re, ic, col] of FICON) if (re.test(txt)) return `<i class="fi" style="--fc:${col}">${IC[ic]}</i>`;
+    return `<i class="fi" style="--fc:#A3ACC7">${IC.hash}</i>`;
+  }
   // field: [key, label, unit, opts]
   function field(root, f) {
     const [key, label, unit, o = {}] = f;
@@ -104,19 +142,19 @@
     const path = root + '.' + key, v = getPath(path);
     const help = o.help ? `<i class="help" title="${esc(o.help)}">?</i>` : '';
     const cls = 'fld' + (o.full ? ' full' : '');
-    if (o.type === 'tog') return `<label class="${cls} tog"><input type="checkbox" data-p="${path}" data-t="bool" ${v ? 'checked' : ''}><span class="sw"></span><span>${label}</span>${help}</label>`;
+    if (o.type === 'tog') return `<label class="${cls} tog"><input type="checkbox" data-p="${path}" data-t="bool" ${v ? 'checked' : ''}><span class="sw"></span>${ficon(key, label, unit)}<span>${label}</span>${help}</label>`;
     if (o.type === 'sel') {
       const opts = (typeof o.options === 'function' ? o.options() : o.options).map(([val, lab]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(lab)}</option>`).join('');
-      return `<label class="${cls}"><span>${label}${help}</span><div class="inp"><select data-p="${path}" data-t="${o.num ? 'num' : 'str'}">${opts}</select></div></label>`;
+      return `<label class="${cls}"><span>${ficon(key, label, unit)}${label}${help}</span><div class="inp"><select data-p="${path}" data-t="${o.num ? 'num' : 'str'}">${opts}</select></div></label>`;
     }
-    if (o.type === 'area') return `<label class="${cls} full"><span>${label}${help}</span><div class="inp"><textarea data-p="${path}" data-t="str" placeholder="${esc(o.ph || '')}">${esc(v)}</textarea></div></label>`;
-    if (o.type === 'text') return `<label class="${cls}"><span>${label}${help}</span><div class="inp"><input type="text" data-p="${path}" data-t="str" value="${esc(v)}">${unit ? `<em>${unit}</em>` : ''}</div></label>`;
+    if (o.type === 'area') return `<label class="${cls} full"><span>${ficon(key, label, unit)}${label}${help}</span><div class="inp"><textarea data-p="${path}" data-t="str" placeholder="${esc(o.ph || '')}">${esc(v)}</textarea></div></label>`;
+    if (o.type === 'text') return `<label class="${cls}"><span>${ficon(key, label, unit)}${label}${help}</span><div class="inp"><input type="text" data-p="${path}" data-t="str" value="${esc(v)}">${unit ? `<em>${unit}</em>` : ''}</div></label>`;
     if (o.type === 'months') {
-      return `<div class="fld full"><span>${label}${help}</span><div class="months">${MONTHS.map((m, i) => `<label>${m}<input type="number" step="0.1" min="0" max="30" data-p="${path}.${i}" data-t="num" value="${v[i]}"></label>`).join('')}</div></div>`;
+      return `<div class="fld full"><span>${ficon(key, label, unit)}${label}${help}</span><div class="months">${MONTHS.map((m, i) => `<label>${m}<input type="number" step="0.1" min="0" max="30" data-p="${path}.${i}" data-t="num" value="${v[i]}"></label>`).join('')}</div></div>`;
     }
     const attrs = `${o.min != null ? `min="${o.min}"` : ''} ${o.max != null ? `max="${o.max}"` : ''} step="${o.step || 'any'}"`;
-    if (o.range) return `<label class="${cls} full"><span>${label}${help}</span><div class="rng"><input type="range" ${attrs} data-p="${path}" data-t="num" value="${v}" data-link="${path}"><div class="inp"><input type="number" ${attrs} data-p="${path}" data-t="num" value="${v}">${unit ? `<em>${unit}</em>` : ''}</div></div></label>`;
-    return `<label class="${cls}"><span>${label}${help}</span><div class="inp"><input type="number" ${attrs} data-p="${path}" data-t="num" value="${v}">${unit ? `<em>${unit}</em>` : ''}</div></label>`;
+    if (o.range) return `<label class="${cls} full"><span>${ficon(key, label, unit)}${label}${help}</span><div class="rng"><input type="range" ${attrs} data-p="${path}" data-t="num" value="${v}" data-link="${path}"><div class="inp"><input type="number" ${attrs} data-p="${path}" data-t="num" value="${v}">${unit ? `<em>${unit}</em>` : ''}</div></div></label>`;
+    return `<label class="${cls}"><span>${ficon(key, label, unit)}${label}${help}</span><div class="inp"><input type="number" ${attrs} data-p="${path}" data-t="num" value="${v}">${unit ? `<em>${unit}</em>` : ''}</div></label>`;
   }
   function section(title, icon, root, fields, open, extra) {
     return `<details class="sec" ${open ? 'open' : ''}><summary><span class="ic">${IC[icon] || IC.gear}</span>${title}</summary><div class="body">${fields.map(f => field(root, f)).join('')}${extra || ''}</div></details>`;
@@ -152,12 +190,12 @@
   }
   function baseOpt(extra) {
     const t = theme();
-    const axis = { axisLine: { lineStyle: { color: t.border } }, axisTick: { show: false }, axisLabel: { color: t.text, fontSize: 11 }, splitLine: { lineStyle: { color: t.grid } }, nameTextStyle: { color: t.text, fontSize: 11 } };
+    const axis = { axisLine: { lineStyle: { color: t.border } }, axisTick: { show: false }, axisLabel: { color: t.text, fontSize: 11 }, splitLine: { lineStyle: { color: t.grid, type: [4, 4] } }, nameTextStyle: { color: t.text, fontSize: 11 } };
     const o = {
-      textStyle: { fontFamily: 'Inter, Segoe UI, system-ui, sans-serif', color: t.text },
+      textStyle: { fontFamily: 'Inter, Segoe UI, system-ui, sans-serif', color: t.text }, color: [t.nh3, t.solar, t.wind, t.h2, t.bess, t.gold, t.curt, t.grid2],
       grid: { left: 52, right: 22, top: 48, bottom: 34, containLabel: false },
-      tooltip: { trigger: 'axis', backgroundColor: t.surface, borderColor: t.border, textStyle: { color: t.textMain, fontSize: 12 }, extraCssText: 'box-shadow:0 8px 24px rgba(0,0,0,.15);border-radius:10px;' },
-      legend: { top: 2, left: 'center', textStyle: { color: t.text, fontSize: 11 }, itemWidth: 12, itemHeight: 8, icon: 'roundRect' },
+      tooltip: { trigger: 'axis', backgroundColor: t.surface, borderColor: t.border, textStyle: { color: t.textMain, fontSize: 12 }, extraCssText: 'box-shadow:0 16px 40px rgba(46,38,120,.16);border-radius:14px;padding:10px 12px;' },
+      legend: { top: 2, left: 'center', textStyle: { color: t.text, fontSize: 11 }, itemWidth: 10, itemHeight: 10, icon: 'circle', itemGap: 14 },
       animationDuration: 450
     };
     if (extra) {
@@ -187,19 +225,19 @@
   }
   const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const excelDate = (h) => new Date(Date.UTC(1990, 0, 1) + h * 3600e3);
-  const hdrStyle = (row, fill) => row.eachCell(c => { c.font = { bold: true, color: { argb: 'FF13201A' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill || 'FFFFE38A' } }; c.border = { bottom: { style: 'thin', color: { argb: 'FF9AA89F' } } }; });
+  const hdrStyle = (row, fill) => row.eachCell(c => { c.font = { bold: true, color: { argb: 'FF24213D' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill || 'FFE9E4FF' } }; c.border = { bottom: { style: 'thin', color: { argb: 'FFC9C0F2' } } }; });
 
   /** Model-ready efficiency workbook (same layout as RE_Production_Efficiency_data.xlsx / Efficiency) */
   async function exportEfficiencyWorkbook(solar, wind, meta, template) {
     const wb = new ExcelJS.Workbook(); wb.creator = 'TrueRE Hybrid Studio — Oriana Power'; wb.created = new Date();
     const ws = wb.addWorksheet('Efficiency', { views: [{ state: 'frozen', ySplit: 6 }] });
     ws.getCell('B1').value = template ? 'TEMPLATE — fill columns B (Solar) and C (Wind) with hourly output in % of installed capacity (kW per kWp x 100)' : (meta.source || 'TrueRE Hybrid Studio');
-    ws.getCell('B1').font = { bold: true, color: { argb: 'FF1F5E14' } };
+    ws.getCell('B1').font = { bold: true, color: { argb: 'FF5B4BD6' } };
     ws.getCell('B2').value = template ? 'Hour-beginning, local standard time, 8760 rows, non-leap year. Values 0–100. Do not change rows 5–6 or the date column.' : `Site ${meta.place || ''} (${fmt(S.site.lat, 4)}, ${fmt(S.site.lon, 4)}) · UTC${S.site.tz >= 0 ? '+' : ''}${S.site.tz} · ${meta.basis || ''}`;
-    ws.getCell('B2').font = { italic: true, color: { argb: 'FF5D6B62' } };
+    ws.getCell('B2').font = { italic: true, color: { argb: 'FF6E6A8A' } };
     ws.getRow(5).values = ['date', 'Solar Efficiency', 'Wind Efficiency', null, null, null, 'Month', 'Day', 'Hour'];
     ws.getRow(6).values = ['    ', '% kW/kWp', '% kW/kWp', null, null, null, 'MM', 'DD', 'HH'];
-    hdrStyle(ws.getRow(5)); hdrStyle(ws.getRow(6), 'FFFFF6D6');
+    hdrStyle(ws.getRow(5)); hdrStyle(ws.getRow(6), 'FFF4F2FB');
     const rows = [];
     for (let h = 0; h < 8760; h++) rows.push([excelDate(h), template ? null : +(solar[h] || 0).toFixed(4), template ? null : +(wind[h] || 0).toFixed(4), null, null, null, TRE.CAL.month[h], TRE.CAL.day[h], TRE.CAL.hour[h]]);
     ws.addRows(rows);
@@ -207,7 +245,7 @@
     ws.getColumn(2).numFmt = '0.0000'; ws.getColumn(3).numFmt = '0.0000';
     if (template) {
       for (let r = 7; r < 7 + 8760; r++) for (const col of ['B', 'C']) {
-        const c = ws.getCell(col + r); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEA' } };
+        const c = ws.getCell(col + r); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBFAFF' } };
         c.dataValidation = { type: 'decimal', operator: 'between', allowBlank: true, formulae: [0, 100], showErrorMessage: true, errorTitle: 'Out of range', error: 'Enter output as % of installed capacity (0–100).' };
       }
       const ins = wb.addWorksheet('Instructions');
@@ -220,7 +258,7 @@
         ['5', 'Leave rows 5–6 and the date / Month / Day / Hour columns unchanged. Annual sum of column B divided by 100 equals the specific yield in kWh/kWp.'],
         ['6', 'Upload the completed file on the RE Profile page or the Site & Resource page ("Upload Excel / PVsyst"). The same file is read directly by the Python simulation model.']
       ];
-      lines.forEach(l => ins.addRow(l)); ins.getColumn(1).width = 6; ins.getColumn(2).width = 140; ins.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF1F5E14' } };
+      lines.forEach(l => ins.addRow(l)); ins.getColumn(1).width = 6; ins.getColumn(2).width = 140; ins.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF5B4BD6' } };
     } else {
       const a = wb.addWorksheet('Assumptions');
       a.addRow(['Parameter', 'Value']); hdrStyle(a.getRow(1));
@@ -228,9 +266,9 @@
       add('Project', S.site.project); add('Location', S.site.place); add('Latitude', S.site.lat); add('Longitude', S.site.lon); add('Elevation (m)', S.site.elev); add('UTC offset (h)', S.site.tz);
       add('Profile source — solar', meta.srcSolar); add('Profile source — wind', meta.srcWind); add('Weather dataset', meta.dataset || '—'); add('Basis', meta.basis || '—'); add('Exceedance level', meta.plevel || 'P50');
       add('Solar specific yield (kWh/kWp)', +(solar.reduce((s, x) => s + x, 0) / 100).toFixed(1)); add('Wind specific yield (kWh/kW)', +(wind.reduce((s, x) => s + x, 0) / 100).toFixed(1));
-      a.addRow([]); a.addRow(['Solar PV design', '']); hdrStyle(a.lastRow, 'FFE6F2E2');
+      a.addRow([]); a.addRow(['Solar PV design', '']); hdrStyle(a.lastRow, 'FFE3F7F0');
       Object.entries(S.pv).forEach(([k, v]) => add('pv.' + k, Array.isArray(v) ? v.join(', ') : v));
-      a.addRow([]); a.addRow(['Wind design', '']); hdrStyle(a.lastRow, 'FFE6F2E2');
+      a.addRow([]); a.addRow(['Wind design', '']); hdrStyle(a.lastRow, 'FFE3F7F0');
       Object.entries(S.wind).forEach(([k, v]) => add('wind.' + k, v));
       a.getColumn(1).width = 38; a.getColumn(2).width = 60;
       const m = wb.addWorksheet('Monthly');
