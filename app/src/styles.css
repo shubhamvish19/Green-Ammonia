@@ -336,23 +336,4 @@ table.t tr.tot td{font-weight:700;border-top:1px solid var(--border-strong);back
 .kpi .v.tick{animation:pop .5s ease}
 @keyframes pop{0%{opacity:.4;transform:translateY(3px)}100%{opacity:1;transform:none}}
 .card.span2{grid-column:1/-1}
-/* ---------------- isometric plant view ---------------- */
-.isowrap{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:#EAF2FB}
-.iso{width:100%;height:auto;display:block;font-family:Inter,sans-serif}
-.iso .rotor{transform-box:view-box;animation:spin var(--rot,6s) linear infinite}
-.iso .iflow{fill:none;stroke-dasharray:5 9;animation:dash var(--flow,1.6s) linear infinite}
-.iso .iflow.nh3{stroke:#7C6CF2}.iso .iflow.h2{stroke:#2FB383}.iso .iflow.pow{stroke:#F09A4A;animation-duration:.9s}.iso .iflow.n2{stroke:#5EAEEB}
-.iso .blink{animation:blink 1.6s steps(2,end) infinite}
-@keyframes blink{50%{opacity:.15}}
-.iso .isteam{opacity:0;animation:isteam 4.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
-@keyframes isteam{0%{opacity:0;transform:translate(0,0) scale(.4)}20%{opacity:.9}100%{opacity:0;transform:translate(16px,-48px) scale(2.6)}}
-.iso .ivx,.iso .ivx2{animation:ivx 26s linear infinite}.iso .ivx2{animation-duration:19s}
-.iso .ivy,.iso .ivy2{animation:ivy 30s linear infinite}.iso .ivy2{animation-duration:22s}
-@keyframes ivx{from{transform:translate(0,0)}to{transform:translate(var(--ivx-x),var(--ivx-y))}}
-@keyframes ivy{from{transform:translate(0,0)}to{transform:translate(calc(var(--ivx-x) * -1),var(--ivx-y))}}
-.iso .idock,.iso .idock2{animation:idock 18s ease-in-out infinite}.iso .idock2{animation-delay:-9s}
-@keyframes idock{0%,8%{opacity:0;transform:translate(-40px,-23px)}20%,70%{opacity:1;transform:translate(0,0)}84%,100%{opacity:0;transform:translate(40px,23px)}}
-.iso .icloud{animation:drift 80s linear infinite}.iso .icloud.c2{animation-duration:110s;animation-delay:-50s}
-.iso .itag{transition:transform .2s}
-.iso .itag:hover{cursor:default}
-@media (prefers-reduced-motion: reduce){.iso *{animation:none!important}}
+

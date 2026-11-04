@@ -21,7 +21,6 @@ parts = {
     '/*@@ENGINE_RE@@*/': safe(rd(SRC / 'engine-re.js')),
     '/*@@ENGINE_PLANT@@*/': safe(rd(SRC / 'engine-plant.js')),
     '/*@@SCENE@@*/': safe(rd(SRC / 'scene.js')),
-    '/*@@SCENE_ISO@@*/': safe(rd(SRC / 'scene-iso.js')),
     '/*@@UI@@*/': safe(rd(SRC / 'ui-core.js') + '\n' + rd(SRC / 'ui-pages.js')),
 }
 for k, v in parts.items():
