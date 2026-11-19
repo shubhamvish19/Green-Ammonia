@@ -1,6 +1,6 @@
-# Green-Ammonia — TrueRE Hybrid Studio
+# Green-Ammonia — HyProfile
 
-`TrueRE_Hybrid_Studio.html` is a self-contained, single-file web application (open it in Chrome or Edge, no installation) for:
+`HyProfile_Studio.html` is a self-contained, single-file web application (open it in Chrome or Edge, no installation) for:
 
 | Step | Function |
 |---|---|

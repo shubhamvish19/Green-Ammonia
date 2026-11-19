@@ -1,5 +1,5 @@
 /* =====================================================================
- * TrueRE Hybrid Studio — pages & application controller
+ * HyProfile — pages & application controller
  * ===================================================================== */
 (function () {
   'use strict';
@@ -262,7 +262,7 @@
   }
   function uploadPanel() {
     return `<div class="grid g2"><div><div class="drop" data-drop>${IC.ul}<b>Drop the efficiency workbook here, or click to browse</b><div class="small">.xlsx (sheet "Efficiency") · .csv · PVsyst hourly CSV (E_Grid)</div><input type="file" accept=".xlsx,.csv,.txt" hidden></div></div>
-      <div><div class="note"><b>Accepted formats</b><br>1. TrueRE template / original <code>RE_Production_Efficiency_data.xlsx</code> — columns "Solar Efficiency" and "Wind Efficiency" in % kW/kWp.<br>2. PVsyst hourly output with an <code>E_Grid</code> column in kW — converted with the reference capacity below.<br>3. Any CSV with the same headers. Leap years are trimmed to 8760 h.</div>
+      <div><div class="note"><b>Accepted formats</b><br>1. HyProfile template / original <code>RE_Production_Efficiency_data.xlsx</code> — columns "Solar Efficiency" and "Wind Efficiency" in % kW/kWp.<br>2. PVsyst hourly output with an <code>E_Grid</code> column in kW — converted with the reference capacity below.<br>3. Any CSV with the same headers. Leap years are trimmed to 8760 h.</div>
       <div class="mt">${U.field('prof', ['pvsystKwp', 'Reference DC capacity for PVsyst E_Grid import', 'kWp', { step: 1, min: 1 }])}</div><button class="btn gold mt" data-tpl style="width:100%">${IC.dl}Download blank Excel template</button>
       <div class="log mt" data-uplog>${S.upload ? `Loaded: ${esc(S.upload.info)}` : ''}</div></div></div>`;
   }
@@ -289,7 +289,7 @@
   }
   async function downloadTemplate() {
     const blob = await U.exportEfficiencyWorkbook(new Array(8760).fill(0), new Array(8760).fill(0), {}, true);
-    U.download('TrueRE_RE_Efficiency_Template.xlsx', blob); toast('Template downloaded');
+    U.download('HyProfile_RE_Efficiency_Template.xlsx', blob); toast('Template downloaded');
   }
   let fetchCtl = null;
   async function fetchResource() {
@@ -661,7 +661,7 @@
     $$('.kpi', root).forEach(k => {
       const lab = k.querySelector('.l').textContent, v = k.querySelector('.v'); const node = v.firstChild;
       if (!node || node.nodeType !== 3) return;
-      const m = node.textContent.match(/^(-?[\d,]*\.?\d+)(.*)$/); if (!m) return;
+      const m = node.textContent.match(/^(-?[\d,]*\.?\d+)(.*)$/); if (!m || /^[–-]\d/.test(m[2])) return;
       const target = parseFloat(m[1].replace(/,/g, '')), dec = (m[1].split('.')[1] || '').length, suffix = m[2];
       const from = kpiPrev.has(lab) ? kpiPrev.get(lab) : target * 0.6; kpiPrev.set(lab, target);
       if (from === target) return;
@@ -706,7 +706,7 @@
     $('#btnExpX').onclick = exportProfileXlsx; $('#btnExpC').onclick = exportProfileCsv;
   }
   function profMeta() {
-    return { place: S.site.place, source: 'TrueRE Hybrid Studio', srcSolar: S.prof.srcSolar, srcWind: S.prof.srcWind, dataset: R.weather ? R.weather.source : (S.cache ? S.cache.dataset : ''), basis: R.weather ? (S.res.basis === 'tmy' ? `TMY ${R.weather.years.join('–')}` : `Year ${S.res.year}`) : '', plevel: `${S.prof.plevel} (${S.prof.pbasis})`, detail: R.re ? R.re.prof : null };
+    return { place: S.site.place, source: 'HyProfile', srcSolar: S.prof.srcSolar, srcWind: S.prof.srcWind, dataset: R.weather ? R.weather.source : (S.cache ? S.cache.dataset : ''), basis: R.weather ? (S.res.basis === 'tmy' ? `TMY ${R.weather.years.join('–')}` : `Year ${S.res.year}`) : '', plevel: `${S.prof.plevel} (${S.prof.pbasis})`, detail: R.re ? R.re.prof : null };
   }
   async function exportProfileXlsx() {
     if (!R.profile) return toast('No profile available yet.');
@@ -923,7 +923,7 @@
     const r = R.plant; if (!r) return;
     busy(true, 'Writing hourly results…', 0.4, '');
     try {
-      const wb = new ExcelJS.Workbook(); wb.creator = 'TrueRE Hybrid Studio';
+      const wb = new ExcelJS.Workbook(); wb.creator = 'HyProfile';
       const ws = wb.addWorksheet('Hourly', { views: [{ state: 'frozen', ySplit: 1 }] });
       const H = r.hourly;
       const cols = [['Solar MW', H.solarMW], ['Wind MW', H.windMW], ['RE MW', H.RE], ['NH3 loop %', H.DC], ['NH3 aux MW', H.DP], ['NH3 t/h', H.DProd], ['Electrolyser MW', H.EP], ['PEM MW', H.PEM_P], ['ALK MW', H.ALK_P], ['H2 t/h', H.H2E], ['H2 storage t', H.H2S_e], ['BESS loop MWh', H.BD_e], ['BESS ely MWh', H.BE_e], ['Bank MWh', H.GB_e], ['Bank flow MW', H.GB_p], ['Curtailed(+)/Import(-) MW', H.CURT], ['Look-ahead setpoint %', H.LA_sp], ['NH3 tank t', H.tankLevel]];
@@ -938,7 +938,7 @@
       if (R.fin) { k.addRow([]); [['Total CAPEX (Cr)', R.fin.capex], ['LCOA (INR/kg)', R.fin.lcoa], ['LCOH (INR/kg)', R.fin.lcoh], ['Project IRR', R.fin.pirr], ['Equity IRR', R.fin.eirr], ['WACC', R.fin.wacc]].forEach(x => k.addRow([x[0], +(+x[1]).toFixed(4)])); }
       k.addRow([]); k.addRow(['Configuration', '']); U.hdrStyle(k.lastRow, 'FFE6F2E2'); Object.entries(S.plant).forEach(([kk, v]) => k.addRow([kk, v]));
       k.getColumn(1).width = 40; k.getColumn(2).width = 22;
-      const buf = await wb.xlsx.writeBuffer(); U.download('TrueRE_Plant_Simulation.xlsx', new Blob([buf], { type: U.XLSX_MIME }));
+      const buf = await wb.xlsx.writeBuffer(); U.download('HyProfile_Plant_Simulation.xlsx', new Blob([buf], { type: U.XLSX_MIME }));
     } finally { busy(false); }
   }
 
@@ -1192,8 +1192,8 @@
    *  PROJECT FILES, THEME, BOOT
    * ================================================================= */
   function saveProject() {
-    const data = JSON.parse(JSON.stringify(S)); data.savedAt = new Date().toISOString(); data.app = 'TrueRE Hybrid Studio';
-    U.download(`${(S.site.project || 'project').replace(/[^A-Za-z0-9]+/g, '_')}.trueRE.json`, new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const data = JSON.parse(JSON.stringify(S)); data.savedAt = new Date().toISOString(); data.app = 'HyProfile';
+    U.download(`${(S.site.project || 'project').replace(/[^A-Za-z0-9]+/g, '_')}.hyprofile.json`, new Blob([JSON.stringify(data)], { type: 'application/json' }));
     toast('Project saved (design, profile cache and uploads included)');
   }
   async function openProject(file) {

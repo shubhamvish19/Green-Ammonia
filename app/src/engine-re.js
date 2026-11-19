@@ -1,5 +1,5 @@
 /* =====================================================================
- * TrueRE Hybrid Studio — Renewable resource & energy-yield engine
+ * HyProfile — Renewable resource & energy-yield engine
  *   Solar: NOAA solar position, Perez-1990 / Hay-Davies transposition,
  *          row-to-row shading, IAM, soiling, PVsyst thermal model,
  *          low-irradiance, bifacial rear gain, DC/AC loss chain,

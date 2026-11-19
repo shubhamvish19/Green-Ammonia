@@ -1,5 +1,5 @@
 /* =====================================================================
- * TrueRE Hybrid Studio — Green ammonia plant engine
+ * HyProfile — Green ammonia plant engine
  *   Faithful JavaScript port of technical_model.GreenAmmoniaTechnicalModel
  *   (Rev9): hourly busbar cascade NH3 loop -> derivative BESS ->
  *   PEM/ALK electrolyser fleet -> electrolyser BESS -> grid bank,

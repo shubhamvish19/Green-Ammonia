@@ -1,5 +1,5 @@
 /* =====================================================================
- * TrueRE Hybrid Studio — animated hybrid-plant illustration
+ * HyProfile — animated hybrid-plant illustration
  * Hand-built SVG landscape: wind farm, solar field, evacuation line,
  * electrolyser hall, H2 bullet, NH3 spheres. Animation rates are driven
  * by the live results (rotor speed from hub wind, flow speed from output).

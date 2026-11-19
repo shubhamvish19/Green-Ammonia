@@ -3,7 +3,7 @@
 
 Usage:  python app/build.py [--libs DIR]
 DIR must contain echarts.min.js, leaflet.js, leaflet.css and exceljs.min.js
-(default: app/vendor). Output: TrueRE_Hybrid_Studio.html at the repo root.
+(default: app/vendor). Output: HyProfile_Studio.html at the repo root.
 """
 import pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -12,7 +12,10 @@ libs = pathlib.Path(sys.argv[sys.argv.index('--libs') + 1]) if '--libs' in sys.a
 rd = lambda p: pathlib.Path(p).read_text(encoding='utf-8')
 safe = lambda js: js.replace('</script', '<\\/script')
 html = rd(SRC / 'index.html')
+import urllib.parse
+fav = 'data:image/svg+xml,' + urllib.parse.quote(rd(SRC / 'mark.svg').strip(), safe=' =:/#,.-')
 parts = {
+    '/*@@FAVICON@@*/': fav,
     '/*@@LEAFLET_CSS@@*/': rd(libs / 'leaflet.css'),
     '/*@@STYLES@@*/': rd(SRC / 'styles.css'),
     '<!--@@LOGO@@-->': rd(SRC / 'logo.svg'),
@@ -26,6 +29,6 @@ parts = {
 for k, v in parts.items():
     assert k in html, k
     html = html.replace(k, v)
-out = ROOT.parent / 'TrueRE_Hybrid_Studio.html'
+out = ROOT.parent / 'HyProfile_Studio.html'
 out.write_text(html, encoding='utf-8')
 print(f'wrote {out} ({out.stat().st_size/1e6:.2f} MB)')

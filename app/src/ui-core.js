@@ -1,12 +1,12 @@
 /* =====================================================================
- * TrueRE Hybrid Studio — UI core: state, persistence, forms, charts, IO
+ * HyProfile — UI core: state, persistence, forms, charts, IO
  * ===================================================================== */
 (function () {
   'use strict';
   const TRE = window.TRE;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const LS_KEY = 'trueRE.hybridStudio.v1';
+  const LS_KEY = 'hyprofile.v1';
 
   /* ---------------- icons ---------------- */
   const P = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -73,7 +73,7 @@
     return base;
   }
   let S = defaultState();
-  try { const raw = localStorage.getItem(LS_KEY); if (raw) S = mergeDeep(defaultState(), JSON.parse(raw)); } catch (e) { /* storage unavailable */ }
+  try { const raw = localStorage.getItem(LS_KEY) || localStorage.getItem('trueRE.hybridStudio.v1'); if (raw) S = mergeDeep(defaultState(), JSON.parse(raw)); } catch (e) { /* storage unavailable */ }
   const R = { weather: null, re: null, profile: null, plant: null, fin: null };
   let saveT = 0;
   function persist() {
@@ -229,9 +229,9 @@
 
   /** Model-ready efficiency workbook (same layout as RE_Production_Efficiency_data.xlsx / Efficiency) */
   async function exportEfficiencyWorkbook(solar, wind, meta, template) {
-    const wb = new ExcelJS.Workbook(); wb.creator = 'TrueRE Hybrid Studio — Oriana Power'; wb.created = new Date();
+    const wb = new ExcelJS.Workbook(); wb.creator = 'HyProfile'; wb.created = new Date();
     const ws = wb.addWorksheet('Efficiency', { views: [{ state: 'frozen', ySplit: 6 }] });
-    ws.getCell('B1').value = template ? 'TEMPLATE — fill columns B (Solar) and C (Wind) with hourly output in % of installed capacity (kW per kWp x 100)' : (meta.source || 'TrueRE Hybrid Studio');
+    ws.getCell('B1').value = template ? 'TEMPLATE — fill columns B (Solar) and C (Wind) with hourly output in % of installed capacity (kW per kWp x 100)' : (meta.source || 'HyProfile');
     ws.getCell('B1').font = { bold: true, color: { argb: 'FF5B4BD6' } };
     ws.getCell('B2').value = template ? 'Hour-beginning, local standard time, 8760 rows, non-leap year. Values 0–100. Do not change rows 5–6 or the date column.' : `Site ${meta.place || ''} (${fmt(S.site.lat, 4)}, ${fmt(S.site.lon, 4)}) · UTC${S.site.tz >= 0 ? '+' : ''}${S.site.tz} · ${meta.basis || ''}`;
     ws.getCell('B2').font = { italic: true, color: { argb: 'FF6E6A8A' } };
@@ -250,7 +250,7 @@
       }
       const ins = wb.addWorksheet('Instructions');
       const lines = [
-        ['TrueRE Hybrid Studio — Hourly RE efficiency template'], [],
+        ['HyProfile — Hourly RE efficiency template'], [],
         ['1', 'Sheet "Efficiency", rows 7–8766: one row per hour of a non-leap year (1 Jan 00:00 to 31 Dec 23:00), local standard time, hour-beginning.'],
         ['2', 'Column B "Solar Efficiency": AC energy injected at the point of interconnection in the hour divided by installed DC capacity, in percent (kWh per kWp x 100).'],
         ['3', 'Column C "Wind Efficiency": net energy at the point of interconnection divided by installed wind capacity, in percent (kWh per kW x 100). Enter 0 where no wind is considered.'],

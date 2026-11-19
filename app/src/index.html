@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TrueRE Hybrid Studio</title>
-<meta name="description" content="Oriana Power TrueRE Hybrid Studio — site-specific solar PV and wind energy profiling with hourly green hydrogen / ammonia plant simulation and screening economics.">
+<title>HyProfile — Hourly Green Hydrogen Simulator</title>
+<link rel="icon" type="image/svg+xml" href="/*@@FAVICON@@*/">
+<meta name="description" content="HyProfile — site-specific hourly solar and wind generation profiles with green hydrogen and ammonia plant simulation and screening economics.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>/*@@LEAFLET_CSS@@*/</style>
@@ -13,16 +14,15 @@
 <body>
 <div class="app">
   <aside class="side" id="side"><div class="side-in">
-    <div class="brand" title="TrueRE — Oriana Power Limited"><!--@@LOGO@@--></div>
-    <div class="prod"><span class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg></span><span><b>Hybrid Studio</b><small>RE profiling &amp; green NH₃</small></span></div>
+    <div class="brand" title="HyProfile — Hourly Green Hydrogen Simulator"><!--@@LOGO@@--></div>
     <div class="navlab">Workflow</div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot"><b>TrueRE Hybrid Studio</b> · v1.1<br>8760 h engine · ERA5 / NASA POWER · PVsyst-type losses · IEC 61400-12-1<br>© Oriana Power Limited</div>
+    <div class="foot"><b>HyProfile</b> · v1.2<br>8760 h engine · ERA5 / NASA POWER · PVsyst-type losses · IEC 61400-12-1</div>
   </div></aside>
   <main class="main">
     <header class="top">
       <button class="btn iconbtn menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      <div class="crumb"><span>Hybrid Studio</span><span>›</span><b id="pageTitle">Site &amp; Resource</b><span id="crumb" hidden></span></div>
+      <div class="crumb"><span>HyProfile</span><span>›</span><b id="pageTitle">Site &amp; Resource</b><span id="crumb" hidden></span></div>
       <div class="grow"></div>
       <span class="chip" id="chipSite"><span class="dot"></span><span>No site</span></span>
       <span class="chip" id="chipData"><span class="dot"></span><span>No resource data</span></span>
