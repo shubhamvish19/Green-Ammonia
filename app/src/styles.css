@@ -368,3 +368,5 @@ table.t tr.tot td{font-weight:700;border-top:1px solid var(--border-strong);back
 .rpt-opt input:focus-visible+.sw{outline:2px solid var(--primary);outline-offset:2px}
 .rpt-opt b{display:block;font-size:12.5px}.rpt-opt small{display:block;color:var(--muted);font-size:11.5px}
 @media (max-width:560px){.rpt-fmt,.rpt-opts{grid-template-columns:1fr}.rptbar .grow{display:none}}
+.rpt-lab{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:-4px}
+.rpt-opt[hidden]{display:none}

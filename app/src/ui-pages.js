@@ -908,9 +908,9 @@
       series: [{ name: 'NH₃', type: 'bar', data: day, barWidth: '90%' }, { name: 'Normal rate', type: 'line', data: new Array(365).fill(c.Derivative_Normal_MTPD), symbol: 'none', lineStyle: { type: 'dashed', color: t.textMain, width: 1 } }] }));
   }
   function reportBar() {
-    return `<div class="rptbar mb"><span class="ic">${IC.file}</span><div><b>Run report</b><small>PDF and Excel report of this simulation — results, figures, ledger, economics and inputs</small></div><div class="grow"></div><button class="btn sm" data-rpt="pdf">${IC.dl}PDF</button><button class="btn sm" data-rpt="xlsx">${IC.dl}Excel</button><button class="btn sm primary" data-rpt="">Options…</button></div>`;
+    return `<div class="rptbar mb"><span class="ic">${IC.file}</span><div><b>Run report</b><small>Technical, financial or techno-economic report · PDF or Excel</small></div><div class="grow"></div><select class="btn sm" data-rpt-type aria-label="Report type">${Object.entries(window.TRE_REPORT ? window.TRE_REPORT.TYPES : {}).map(([k, t]) => `<option value="${k}" ${(window.TRE_REPORT && window.TRE_REPORT.opts().type) === k ? 'selected' : ''}>${t.name}</option>`).join('')}</select><button class="btn sm" data-rpt="pdf">${IC.dl}PDF</button><button class="btn sm" data-rpt="xlsx">${IC.dl}Excel</button><button class="btn sm primary" data-rpt="">Options…</button></div>`;
   }
-  document.addEventListener('click', (e) => { const b = e.target.closest('[data-rpt]'); if (!b) return; const k = b.dataset.rpt; if (k) window.TRE_REPORT.generate(Object.assign(window.TRE_REPORT.opts(), { format: k })); else window.TRE_REPORT.open(); });
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-rpt]'); if (!b) return; const k = b.dataset.rpt; if (k) { const sel = b.parentElement.querySelector('[data-rpt-type]'); window.TRE_REPORT.generate(Object.assign(window.TRE_REPORT.opts(), { format: k }, sel ? { type: sel.value } : {})); } else window.TRE_REPORT.open(); });
   function pfdData(r) {
     const a = r.annual, c = r.cfg, H = r.hourly;
     let soc = 0; if (c.BESS_Total_MWh > 0) { for (let i = 0; i < 8760; i++) soc += (H.BD_e[i] + H.BE_e[i]) / c.BESS_Total_MWh; soc /= 8760; }

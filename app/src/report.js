@@ -25,7 +25,12 @@
 
   /* ---------- options (per browser) ---------- */
   const OPT_KEY = 'hyprofile.report.v1';
-  const defOpts = () => ({ title: '', author: '', client: '', format: 'pdf', resource: true, operations: true, economics: true, inputs: true, hourly: true });
+  const TYPES = {
+    tech: { name: 'Technical report', short: 'Technical', file: 'Technical', cover: 'TECHNICAL REPORT', sub: 'Renewable resource, hourly hydrogen & ammonia production, storage and offtake performance', toggles: ['resource', 'operations', 'inputs', 'hourly'] },
+    fin: { name: 'Financial / economics report', short: 'Financial', file: 'Financial', cover: 'FINANCIAL / ECONOMICS REPORT', sub: 'Capital and operating cost, levelised cost, returns, debt cover and cash flow', toggles: ['inputs'] },
+    techno: { name: 'Techno-economic report', short: 'Techno-economic', file: 'Techno_Economic', cover: 'TECHNO-ECONOMIC REPORT', sub: 'Hourly green hydrogen & ammonia production, storage, offtake and screening economics', toggles: ['resource', 'operations', 'economics', 'inputs', 'hourly'] }
+  };
+  const defOpts = () => ({ type: 'techno', title: '', author: '', client: '', format: 'pdf', resource: true, operations: true, economics: true, inputs: true, hourly: true });
   function loadOpts() { try { return Object.assign(defOpts(), JSON.parse(localStorage.getItem(OPT_KEY) || '{}')); } catch (e) { return defOpts(); } }
   function saveOpts(o) { try { localStorage.setItem(OPT_KEY, JSON.stringify(o)); } catch (e) { /* storage unavailable */ } }
 
@@ -67,29 +72,23 @@
     }
     // monthly RE (MWh) from the profile
     const mRE = []; for (let m = 1; m <= 12; m++) { let s = 0, w = 0, n = 0; for (let h = 0; h < 8760; h++) if (CAL.month[h] === m) { s += H.solarMW[h]; w += H.windMW[h]; n++; } mRE.push({ m, solar: s, wind: w, hours: n }); }
-    const kpis = [
-      ['Annual NH3 production', f0(a.nh3), 't/yr', `${f1(a.nh3 / 365)} t/day · ${pc(a.nh3 / (c.Derivative_Normal_MTPD * 365))} of normal rate`],
-      ['Offtake fulfilment', pc(ful), '', `${a.daysMet}/${a.days} days · ${a.monthsMet}/12 months met`],
-      ['Green H2 production', f0(a.h2), 't/yr', `PEM ${f0(a.h2pem)} · ALK ${f0(a.h2alk)} t`],
-      ['Electrolyser CUF', fmt(a.elyCUF, 1) + '%', '', `PEM ${fmt(a.pemUtil, 1)}% · ALK ${fmt(a.alkUtil, 1)}%`],
-      ['NH3 loop utilisation', fmt(a.loopUtil, 1) + '%', '', `${f0(a.hoursRunning)} h running · ${f0(a.shutdowns)} shutdowns`],
-      ['RE curtailment', pc(a.re > 0 ? a.curtailed / a.re : 0), '', `${f1(a.curtailed / 1000)} of ${f1(a.re / 1000)} GWh`],
-      ['LCOA', f1(f.lcoa), 'INR/kg', `${f0(f.lcoa * 1000 / 83.5)} USD/t @ 83.5`],
-      ['LCOH', f1(f.lcoh), 'INR/kg', `${f2(f.lcoh / 83.5)} USD/kg`],
-      ['Total project cost', f0(f.capex), 'INR Cr', `EPC ${f0(f.epc)} · IDC ${f0(f.idc)} · land ${f0(f.land)}`],
-      ['Project IRR (post-tax)', pc(f.pirr), '', `WACC ${pc(f.wacc)}`],
-      ['Equity IRR', pc(f.eirr), '', `Gearing ${fmt(S.fin.Gearing_Percent)}%`],
-      ['Minimum DSCR', fin(f.minDSCR) ? fmt(f.minDSCR, 2) + 'x' : '—', '', `Tenor ${S.fin.Loan_Tenor_Years} yr`]
+    const T = TYPES[o.type] ? o.type : 'techno', isTech = T !== 'fin', isFin = T !== 'tech';
+    const kpisAll = [
+      ['Annual NH3 production', f0(a.nh3), 't/yr', `${f1(a.nh3 / 365)} t/day · ${pc(a.nh3 / (c.Derivative_Normal_MTPD * 365))} of normal rate`, 'b'],
+      ['Offtake fulfilment', pc(ful), '', `${a.daysMet}/${a.days} days · ${a.monthsMet}/12 months met`, 'b'],
+      ['Green H2 production', f0(a.h2), 't/yr', `PEM ${f0(a.h2pem)} · ALK ${f0(a.h2alk)} t`, 't'],
+      ['Electrolyser CUF', fmt(a.elyCUF, 1) + '%', '', `PEM ${fmt(a.pemUtil, 1)}% · ALK ${fmt(a.alkUtil, 1)}%`, 't'],
+      ['NH3 loop utilisation', fmt(a.loopUtil, 1) + '%', '', `${f0(a.hoursRunning)} h running · ${f0(a.shutdowns)} shutdowns`, 't'],
+      ['RE curtailment', pc(a.re > 0 ? a.curtailed / a.re : 0), '', `${f1(a.curtailed / 1000)} of ${f1(a.re / 1000)} GWh`, 't'],
+      ['LCOA', f1(f.lcoa), 'INR/kg', `${f0(f.lcoa * 1000 / 83.5)} USD/t @ 83.5`, 'f'],
+      ['LCOH', f1(f.lcoh), 'INR/kg', `${f2(f.lcoh / 83.5)} USD/kg`, 'f'],
+      ['Total project cost', f0(f.capex), 'INR Cr', `EPC ${f0(f.epc)} · IDC ${f0(f.idc)} · land ${f0(f.land)}`, 'f'],
+      ['Project IRR (post-tax)', pc(f.pirr), '', `WACC ${pc(f.wacc)}`, 'f'],
+      ['Equity IRR', pc(f.eirr), '', `Gearing ${fmt(S.fin.Gearing_Percent)}%`, 'f'],
+      ['Minimum DSCR', fin(f.minDSCR) ? fmt(f.minDSCR, 2) + 'x' : '—', '', `Tenor ${S.fin.Loan_Tenor_Years} yr`, 'f']
     ];
-    // observations (factual statements)
-    const obs = [];
-    obs.push(`The plant produces ${f0(a.nh3)} t of ammonia per year (${f1(a.nh3 / 365)} t/day), equal to ${pc(a.nh3 / (c.Derivative_Normal_MTPD * 365))} of the ${f0(c.Derivative_Normal_MTPD)} MTPD normal rate, from ${f0(a.h2)} t of green hydrogen.`);
-    obs.push(`Offtake fulfilment is ${pc(ful)}: the contract is met on ${a.daysMet} of ${a.days} days and in ${a.monthsMet} of 12 months, with an annual shortfall of ${f0(a.offtakeShortfall)} t and ${f0(a.excess)} t of excess product when the tank is full.`);
-    obs.push(`Renewable generation totals ${f1(a.re / 1000)} GWh/yr (solar ${f1(a.solar / 1000)}, wind ${f1(a.wind / 1000)}); ${pc(a.re > 0 ? a.curtailed / a.re : 0)} is curtailed.`);
-    obs.push(`The ammonia loop runs ${f0(a.hoursRunning)} h/yr at ${fmt(a.loopUtil, 1)}% average utilisation with ${f0(a.shutdowns)} shutdown event(s); look-ahead rationing is active for ${f0(a.hoursRationed)} h.`);
-    if (fin(f.lcoa)) obs.push(`The levelised cost of ammonia is ${f1(f.lcoa)} INR/kg against a breakeven green-ammonia price of ${f1(f.breakeven)} INR/kg and a contract price of ${f1(S.fin.Ammonia_Price_INR_per_kg)} INR/kg.`);
-    if (fin(f.pirr)) obs.push(`The post-tax project IRR is ${pc(f.pirr)} ${f.pirr >= f.wacc ? 'and exceeds' : 'and is below'} the ${pc(f.wacc)} WACC; the equity IRR is ${pc(f.eirr)}${fin(f.minDSCR) ? ` and the minimum DSCR is ${fmt(f.minDSCR, 2)}x` : ''}.`);
-    r.warnings.forEach(w => obs.push('Model note: ' + w));
+    const keep = (t) => t === 'b' || (t === 't' && isTech) || (t === 'f' && isFin);
+    const kpis = kpisAll.filter(k => keep(k[4]));
     // energy balance
     const bessLoss = Math.max(0, a.bessCharge - a.bessDisch);
     const balance = [
@@ -98,7 +97,10 @@
       ['Grid banking charges', a.bankTariff, 'Use'], ['Curtailed', a.curtailed, 'Use'], ['Grid import', a.imported, 'Supply'],
       ['BESS charge', a.bessCharge, 'Storage'], ['BESS discharge', a.bessDisch, 'Storage'], ['Grid bank deposit', a.bankIn, 'Storage'], ['Grid bank withdrawal', a.bankOut, 'Storage']
     ];
-    return { r, f, a, c, H, d, prof, meta, resource, pvLoss, windLoss, mRE, kpis, obs, balance, ful, o };
+    const sec = { resource: isTech && o.resource, operations: isTech && o.operations, production: T === 'fin', economics: T === 'fin' || (isFin && o.economics), inputs: o.inputs, hourly: isTech && o.hourly };
+    meta.type = T; meta.typeName = TYPES[T].name;
+    const notes = isTech ? r.warnings.slice() : [];
+    return { r, f, a, c, H, d, prof, meta, resource, pvLoss, windLoss, mRE, kpis, kpisAll, balance, ful, o, T, isTech, isFin, sec, notes };
   }
   function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
@@ -255,7 +257,7 @@
   /* =================================================================
    *  INPUT LISTS
    * ================================================================= */
-  function inputRows() {
+  function inputRows(T) {
     const spec = APP().formSpec();
     const rows = [];
     const val = (root, key) => { const v = U.getPath(root + '.' + key); return v; };
@@ -269,10 +271,12 @@
     site.forEach(x => rows.push({ sec: 'Site', group: 'Site', label: x[0], value: x[1], unit: x[2], key: 'site' }));
     const res = [['Weather dataset', R.weather ? R.weather.source : (S.cache ? S.cache.dataset : S.res.source), ''], ['Years analysed', `${S.res.y0}–${S.res.y1}`, ''], ['Profile construction', S.res.basis === 'tmy' ? 'Typical year (Sandia TMY)' : 'Single year ' + S.res.year, ''],
       ['Solar profile source', S.prof.srcSolar, ''], ['Wind profile source', S.prof.srcWind, ''], ['Exceedance level', S.prof.plevel + ' (' + (S.prof.pbasis === '10y' ? '10-year' : '1-year') + ')', ''], ['Solar uncertainty', S.prof.uncSolar, '%'], ['Wind uncertainty', S.prof.uncWind, '%']];
-    res.forEach(x => rows.push({ sec: 'Resource & profile', group: 'Resource & profile', label: x[0], value: x[1], unit: x[2], key: 'res' }));
+    if (T !== 'fin' || true) res.forEach(x => rows.push({ sec: 'Resource & profile', group: 'Resource & profile', label: x[0], value: x[1], unit: x[2], key: 'res' }));
     const secName = { pv: 'Solar PV design', wind: 'Wind design', plant: 'Plant configuration', fin: 'Economics' };
     for (const [path, sp] of spec) {
       if (!secName[sp.root]) continue;
+      if (T === 'tech' && sp.root === 'fin') continue;
+      if (T === 'fin' && (sp.root === 'pv' || sp.root === 'wind')) continue;
       const v = val(sp.root, sp.key);
       if (v == null || typeof v === 'object' && !Array.isArray(v)) continue;
       rows.push({ sec: secName[sp.root], group: sp.group, label: sp.label, value: show(sp, v), unit: sp.unit || '', key: path });
@@ -294,13 +298,13 @@
     const col = (h) => doc.setTextColor(...rgb(h)), fill = (h) => doc.setFillColor(...rgb(h)), draw = (h) => doc.setDrawColor(...rgb(h));
     const font = (st, sz) => { doc.setFont('helvetica', st); doc.setFontSize(sz); };
     const text = (s, x, yy, o) => doc.text(tx(s), x, yy, o);
-    const toc = [];
+    const toc = []; let secN = 0; const num = (t) => `${++secN}  ${t}`;
 
     function header() {
       fill('#FFFFFF'); doc.rect(0, 0, PW, 14, 'F');
       if (logo) doc.addImage(logo, 'PNG', M, 4.2, 6, 6);
       font('bold', 9); col(C.ink); text('HyProfile', M + 8, 8.6);
-      font('normal', 8); col(C.muted); text('Simulation report', M + 25, 8.6);
+      font('normal', 8); col(C.muted); text(TYPES[D.T].name, M + 25, 8.6);
       text(meta.title.length > 70 ? meta.title.slice(0, 68) + '…' : meta.title, PW - M, 8.6, { align: 'right' });
       draw(C.line); doc.setLineWidth(0.3); doc.line(M, 12, PW - M, 12);
     }
@@ -321,18 +325,6 @@
       const lh = size * 0.43;
       lines.forEach(l => { ensure(lh + 1); text(l, M, y); y += lh; });
       y += 2;
-    }
-    function bullets(list, size = 9.5) {
-      font('normal', size);
-      const lh = size * 0.43;
-      list.forEach(s => {
-        const lines = doc.splitTextToSize(tx(s), CW - 6);
-        ensure(lines.length * lh + 2);
-        fill(C.accent); doc.circle(M + 1.4, y - 1.2, 0.8, 'F'); col(C.ink);
-        lines.forEach((l, i) => { text(l, M + 5, y); y += lh; });
-        y += 1.6;
-      });
-      y += 1;
     }
     function figure(fg, caption, wmm) {
       if (!fg) return;
@@ -386,11 +378,11 @@
     if (logo) doc.addImage(logo, 'PNG', M, 20, 16, 16);
     font('bold', 15); col(C.ink); text('HyProfile', M + 20, 27.2);
     font('normal', 8.5); col(C.muted); text('HOURLY GREEN H2 SIMULATOR', M + 20, 32.4);
-    font('bold', 9); col(C.accent); text('MODEL RUN REPORT', M, 70);
+    font('bold', 9); col(C.accent); text(TYPES[D.T].cover, M, 70);
     font('bold', 24); col(C.ink);
     const tl = doc.splitTextToSize(tx(meta.title), CW - 60); tl.slice(0, 3).forEach((l, i) => text(l, M, 81 + i * 10));
     let yy = 81 + Math.min(3, tl.length) * 10 + 2;
-    font('normal', 11); col(C.muted); text('Hourly green hydrogen & ammonia production, storage, offtake and screening economics', M, yy); yy += 14;
+    font('normal', 11); col(C.muted); text(TYPES[D.T].sub, M, yy); yy += 14;
     const metaRows = [['Site', `${meta.place || '—'}`], ['Coordinates', `${fmt(meta.lat, 4)}°, ${fmt(meta.lon, 4)}°  ·  ${fmt(meta.elev, 0)} m  ·  UTC${meta.tz >= 0 ? '+' : ''}${meta.tz}`],
       ['Configuration case', meta.caseName], ['Profile', `Solar: ${D.resource.srcSolar}  ·  Wind: ${D.resource.srcWind}  ·  ${D.resource.plevel}`]];
     if (meta.client) metaRows.push(['Prepared for', meta.client]);
@@ -399,27 +391,33 @@
     metaRows.forEach(([k, v]) => { font('normal', 8.5); col(C.muted); text(k.toUpperCase(), M, yy); font('normal', 10); col(C.ink); const vl = doc.splitTextToSize(tx(v), CW - 45).slice(0, 2); vl.forEach((l, i) => text(l, M + 42, yy + i * 4.6)); yy += 7 + (vl.length - 1) * 4.6; });
     y = yy + 8;
     const ful = D.ful;
-    kpiTiles([
-      ['Ammonia production', f0(a.nh3), 't/yr', `${f1(a.nh3 / 365)} t/day`, C.nh3],
-      ['Offtake fulfilment', pc(ful), '', `${a.daysMet}/${a.days} days met`, ful > 0.98 ? C.ok : C.warn],
-      ['Green hydrogen', f0(a.h2), 't/yr', `Electrolyser CUF ${fmt(a.elyCUF, 1)}%`, C.h2],
-      ['LCOA', f1(f.lcoa), 'INR/kg', `Breakeven ${f1(f.breakeven)} INR/kg`, C.accent],
-      ['Project IRR', pc(f.pirr), '', `WACC ${pc(f.wacc)}`, fin(f.pirr) && f.pirr >= f.wacc ? C.ok : C.curt],
-      ['Total project cost', f0(f.capex), 'INR Cr', `EPC ${f0(f.epc)} Cr`, C.gold]
-    ], 3);
+    const tl0 = {
+      nh3: ['Ammonia production', f0(a.nh3), 't/yr', `${f1(a.nh3 / 365)} t/day`, C.nh3],
+      ful: ['Offtake fulfilment', pc(ful), '', `${a.daysMet}/${a.days} days met`, ful > 0.98 ? C.ok : C.warn],
+      h2: ['Green hydrogen', f0(a.h2), 't/yr', `Electrolyser CUF ${fmt(a.elyCUF, 1)}%`, C.h2],
+      loop: ['NH3 loop utilisation', fmt(a.loopUtil, 1) + '%', '', `${f0(a.shutdowns)} shutdown(s)/yr`, C.nh3],
+      re: ['RE generation', f1(a.re / 1000), 'GWh/yr', `Curtailed ${pc(a.re > 0 ? a.curtailed / a.re : 0)}`, C.solar],
+      cuf: ['Electrolyser CUF', fmt(a.elyCUF, 1) + '%', '', `PEM ${fmt(a.pemUtil, 0)}% · ALK ${fmt(a.alkUtil, 0)}%`, C.h2],
+      lcoa: ['LCOA', f1(f.lcoa), 'INR/kg', `Breakeven ${f1(f.breakeven)} INR/kg`, C.accent],
+      lcoh: ['LCOH', f1(f.lcoh), 'INR/kg', `${f2(f.lcoh / 83.5)} USD/kg`, C.h2],
+      pirr: ['Project IRR', pc(f.pirr), '', `WACC ${pc(f.wacc)}`, fin(f.pirr) && f.pirr >= f.wacc ? C.ok : C.curt],
+      eirr: ['Equity IRR', pc(f.eirr), '', `Gearing ${fmt(S.fin.Gearing_Percent)}%`, C.nh3],
+      dscr: ['Minimum DSCR', fin(f.minDSCR) ? fmt(f.minDSCR, 2) + 'x' : '—', '', `Tenor ${S.fin.Loan_Tenor_Years} yr`, fin(f.minDSCR) && f.minDSCR >= 1.3 ? C.ok : C.warn],
+      capex: ['Total project cost', f0(f.capex), 'INR Cr', `EPC ${f0(f.epc)} Cr`, C.gold]
+    };
+    const coverSet = { tech: ['nh3', 'ful', 'h2', 'cuf', 'loop', 're'], fin: ['capex', 'lcoa', 'lcoh', 'pirr', 'eirr', 'dscr'], techno: ['nh3', 'ful', 'h2', 'lcoa', 'pirr', 'capex'] }[D.T];
+    kpiTiles(coverSet.map(k => tl0[k]), 3);
     font('normal', 7.5); col(C.faint);
-    text('Screening-level results generated in the browser by the HyProfile 8760-hour engine. Figures are indicative and depend on the stated inputs.', M, PH - 14);
+    text('HyProfile v1.2 · 8760-hour engine · screening-level results', M, PH - 14);
 
     /* ---- contents placeholder page ---- */
     page(); const tocPage = doc.getNumberOfPages();
 
     /* ---- 1 executive summary ---- */
-    page('1  Executive summary');
-    para(`This report documents a single model run of the hybrid renewable-energy, green-hydrogen and ammonia plant at ${meta.place || 'the selected site'}. The plant is simulated hour by hour for 8,760 hours with a 72-hour cyclic warm-up; product storage and offtake are tracked on the operating year starting ${c.Analysis_Day_start}/${c.Analysis_Month_start}.`);
+    page(num('Executive summary'));
     h2('Key results');
     table(['Indicator', 'Value', 'Unit', 'Detail'], D.kpis.map(k => [k[0], k[1], k[2], k[3]]), { numCols: [1], at: { styles: { fontSize: 8.2, cellPadding: { top: 1.3, bottom: 1.3, left: 2, right: 2 } }, columnStyles: { 0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 26 }, 2: { cellWidth: 18 } } } });
-    h2('Observations');
-    bullets(D.obs);
+    if (D.notes.length) { h2('Model notes'); table(['#', 'Note'], D.notes.map((t, k) => [String(k + 1), t]), { numeric: false, at: { columnStyles: { 0: { cellWidth: 10 } } } }); }
     h2('Installed configuration');
     table(['Asset', 'Rating', 'Unit'], [
       ['Solar PV', f0(c.Solar_Capacity_MWp), 'MWp'], ['Wind', f0(c.Wind_Capacity_MWp), 'MW'],
@@ -431,8 +429,8 @@
     ], { numCols: [1], at: { styles: { fontSize: 8, cellPadding: { top: 1.1, bottom: 1.1, left: 2, right: 2 } }, columnStyles: { 0: { cellWidth: 80 } } } });
 
     /* ---- 2 resource ---- */
-    if (D.o.resource) {
-      page('2  Renewable resource & generation profile');
+    if (D.sec.resource) {
+      page(num('Renewable resource & generation profile'));
       const rs = D.resource;
       table(['Item', 'Solar PV', 'Wind'], [
         ['Profile source', rs.srcSolar, rs.srcWind],
@@ -442,10 +440,10 @@
         ['Capacity utilisation factor', pc(rs.solarCUF, 2), pc(rs.windCUF, 2)],
         ['Annual generation (plant)', `${f1(a.solar / 1000)} GWh`, `${f1(a.wind / 1000)} GWh`]
       ].concat(rs.model ? [['Weather data', `${rs.dataset || '—'} ${rs.years ? rs.years.join('–') : ''}`, rs.basis]] : []), { numeric: false, at: { columnStyles: { 0: { cellWidth: 58, fontStyle: 'bold' } } } });
-      figure(figs.reMonthly, 'Figure 2.1  Monthly renewable generation at the point of interconnection (GWh).');
-      figure(figs.diurnal, 'Figure 2.2  Average diurnal generation and electrolyser load (MW).');
-      figure(figs.duration, 'Figure 2.3  Duration curves of hourly generation and electrolyser load (MW).');
-      if (figs.years) figure(figs.years, 'Figure 2.4  Inter-annual variability of specific yield.');
+      figure(figs.reMonthly, `Figure ${secN}.1  Monthly renewable generation at the point of interconnection (GWh).`);
+      figure(figs.diurnal, `Figure ${secN}.2  Average diurnal generation and electrolyser load (MW).`);
+      figure(figs.duration, `Figure ${secN}.3  Duration curves of hourly generation and electrolyser load (MW).`);
+      if (figs.years) figure(figs.years, `Figure ${secN}.4  Inter-annual variability of specific yield.`);
       if (rs.perYear) {
         h2('Annual statistics by weather year');
         table(['Year', 'Solar yield (kWh/kWp)', 'Solar CUF', 'Wind yield (MWh/MW)', 'Wind CUF', 'GHI (kWh/m²)', 'Mean hub speed (m/s)'],
@@ -455,7 +453,7 @@
         h2('Solar PV energy loss chain (per kWp, annual average)');
         table(['Stage / loss', 'Change', 'Value'], D.pvLoss.rows.filter(x => x.type === 'stage' || Math.abs(x.rel) >= 0.00005).map(x => x.type === 'stage' ? [x.label, '', `${fmt(x.value, 1)} ${x.unit}`] : [x.label, (x.rel > 0 ? '+' : '') + fmt(x.rel * 100, 2) + '%', fmt(x.abs, 1)]),
           { boldRows: D.pvLoss.rows.filter(x => x.type === 'stage' || Math.abs(x.rel) >= 0.00005).map((x, i) => x.type === 'stage' ? i : -1).filter(i => i >= 0), at: { columnStyles: { 0: { cellWidth: 110 } } } });
-        para(`Performance ratio ${pc(D.pvLoss.pr)} (E_Grid / POA × kWp). Night-time auxiliary consumption ${fmt(D.pvLoss.night, 1)} kWh/kWp is reported separately.`, 8.5);
+        para(`PR ${pc(D.pvLoss.pr)} · night auxiliaries ${fmt(D.pvLoss.night, 1)} kWh/kWp`, 8.5);
       }
       if (D.windLoss) {
         h2('Wind energy loss chain (per MW, annual average)');
@@ -466,8 +464,21 @@
     }
 
     /* ---- 3 operations ---- */
-    if (D.o.operations) {
-      page('3  Plant operation');
+    if (D.sec.production) {
+      page(num('Production & sales basis'));
+      kpiTiles([tl0.nh3, tl0.ful, tl0.h2,
+        ['Green NH3 dispatched', f0(a.offtakeDispatched), 't/yr', `Contract ${f0(c.Derivative_Offtake_TPM)} t/month`, C.ok],
+        ['Excess NH3', f0(a.excess), 't/yr', `Sold at ${f1(S.fin.Grey_Ammonia_Price_INR_per_kg)} INR/kg`, C.gold],
+        ['Shortfall', f0(a.offtakeShortfall), 't/yr', `${a.monthsMet}/12 months met`, C.curt]], 3);
+      figure(figs.nh3Monthly, `Figure ${secN}.1  Monthly ammonia production, dispatch and shortfall against the monthly obligation (t).`);
+      h2('Product tank & offtake ledger (operating year)');
+      const L = r.tank.ledger, tot = (k) => sum(L.map(x => x[k]));
+      table(['Month', 'Opening (t)', 'Production (t)', 'Excess (t)', 'Due (t)', 'Dispatched (t)', 'Shortfall (t)', 'Closing (t)', 'Fulfilment'],
+        L.map(l => [MONTHS[l.month - 1], f0(l.open), f0(l.prod), f0(l.excess), f0(l.due), f0(l.lifted), f0(l.short), f0(l.close), l.due > 0 ? pc(l.lifted / l.due) : '—'])
+          .concat([['Year', '', f0(tot('prod')), f0(tot('excess')), f0(tot('due')), f0(tot('lifted')), f0(tot('short')), '', tot('due') > 0 ? pc(tot('lifted') / tot('due')) : '—']]), { boldRows: [L.length], at: { styles: { fontSize: 7.8 } } });
+    }
+    if (D.sec.operations) {
+      page(num('Plant operation'));
       kpiTiles([
         ['NH3 production', f0(a.nh3), 't/yr', `${pc(a.nh3 / (c.Derivative_Normal_MTPD * 365))} of normal rate`, C.nh3],
         ['Loop utilisation', fmt(a.loopUtil, 1) + '%', '', `${f0(a.hoursRunning)} h running`, C.nh3],
@@ -476,14 +487,14 @@
         ['Electrolyser CUF', fmt(a.elyCUF, 1) + '%', '', `${f0(a.hoursRampLimited)} h ramp-limited`, C.h2],
         ['Curtailment', pc(a.re > 0 ? a.curtailed / a.re : 0), '', `${f1(a.curtailed / 1000)} GWh`, C.curt]
       ], 3);
-      figure(figs.sankey, 'Figure 3.1  Annual energy flow (GWh/yr). Hydrogen energy is shown on a lower-heating-value basis (33.33 kWh/kg).');
+      figure(figs.sankey, `Figure ${secN}.1  Annual energy flow (GWh/yr). Hydrogen energy is shown on a lower-heating-value basis (33.33 kWh/kg).`);
       h2('Annual energy balance');
       table(['Flow', 'Category', 'MWh/yr', 'Share of RE'], D.balance.map(b => [b[0], b[2], f0(b[1]), b[2] === 'Use' || b[0].startsWith('Solar') || b[0].startsWith('Wind') ? pc(a.re > 0 ? b[1] / a.re : 0) : '']), { numCols: [2, 3] });
-      figure(figs.nh3Monthly, 'Figure 3.2  Monthly ammonia production, dispatch and shortfall against the monthly obligation (t).');
-      figure(figs.nh3Daily, 'Figure 3.3  Daily ammonia production (t/day); colour indicates < 50 %, 50–95 % and >= 95 % of the normal rate.');
-      figure(figs.weekHigh, `Figure 3.4  Hourly dispatch in the highest-RE week (starting ${figs.weekHigh.label}).`);
-      figure(figs.weekLow, `Figure 3.5  Hourly dispatch in the lowest-RE week (starting ${figs.weekLow.label}).`);
-      figure(figs.storage, 'Figure 3.6  Daily mean storage levels (% of installed capacity).');
+      figure(figs.nh3Monthly, `Figure ${secN}.2  Monthly ammonia production, dispatch and shortfall against the monthly obligation (t).`);
+      figure(figs.nh3Daily, `Figure ${secN}.3  Daily ammonia production (t/day); colour indicates < 50 %, 50–95 % and >= 95 % of the normal rate.`);
+      figure(figs.weekHigh, `Figure ${secN}.4  Hourly dispatch in the highest-RE week (starting ${figs.weekHigh.label}).`);
+      figure(figs.weekLow, `Figure ${secN}.5  Hourly dispatch in the lowest-RE week (starting ${figs.weekLow.label}).`);
+      figure(figs.storage, `Figure ${secN}.6  Daily mean storage levels (% of installed capacity).`);
       h2('Monthly operating summary');
       const mm = r.monthly, T = (k) => sum(mm.map(x => x[k]));
       table(['Month', 'RE (MWh)', 'Electrolyser (MWh)', 'Curtailed (MWh)', 'H2 (t)', 'NH3 (t)', 'Shutdowns'],
@@ -496,8 +507,8 @@
     }
 
     /* ---- 4 economics ---- */
-    if (D.o.economics) {
-      page('4  Screening economics');
+    if (D.sec.economics) {
+      page(num('Screening economics'));
       kpiTiles([
         ['Total project cost', f0(f.capex), 'INR Cr', `Hard cost ${f0(f.hard)} · IDC ${f0(f.idc)}`, C.gold],
         ['LCOA', f1(f.lcoa), 'INR/kg', `${f0(f.lcoa * 1000 / 83.5)} USD/t`, C.accent],
@@ -506,7 +517,7 @@
         ['Equity IRR', pc(f.eirr), '', `Cost of equity ${fmt(S.fin.Cost_of_Equity_Percent, 1)}%`, C.nh3],
         ['Minimum DSCR', fin(f.minDSCR) ? fmt(f.minDSCR, 2) + 'x' : '—', '', `Breakeven ${f1(f.breakeven)} INR/kg`, fin(f.minDSCR) && f.minDSCR >= 1.3 ? C.ok : C.warn]
       ], 3);
-      figure(figs.capex, 'Figure 4.1  Capital cost breakdown (INR crore).');
+      figure(figs.capex, `Figure ${secN}.1  Capital cost breakdown (INR crore).`);
       h2('Capital cost');
       const capRows = Object.entries(f.sec).map(([k, v]) => [k, f1(v), pc(v / f.capex)]);
       capRows.push(['EPC subtotal', f1(f.epc), pc(f.epc / f.capex)], ['Contingency, owner’s & pre-operative', f1(f.soft), pc(f.soft / f.capex)], ['Land', f1(f.land), pc(f.land / f.capex)], ['Interest during construction', f1(f.idc), pc(f.idc / f.capex)], ['Total project cost', f1(f.capex), '100.0%']);
@@ -514,22 +525,21 @@
       h2('Operating cost (year 1)');
       const op = Object.entries(f.fixedOpex).map(([k, v]) => [k, f2(v)]); op.push(['Total year-1 OPEX', f2(f.opex1)]);
       table(['Item', 'INR crore/yr'], op, { boldRows: [op.length - 1] });
-      figure(figs.lcoa, 'Figure 4.2  Levelised cost of ammonia build-up (INR/kg).');
+      figure(figs.lcoa, `Figure ${secN}.2  Levelised cost of ammonia build-up (INR/kg).`);
       h2('Levelised cost components');
       table(['Component', 'INR/kg NH3'], figs.lcoaComps.map(x => [x[0], f2(x[1])]), { boldRows: [figs.lcoaComps.length - 1] });
-      figure(figs.cash, 'Figure 4.3  Project free cash flow and cumulative position (INR crore, nominal).');
+      figure(figs.cash, `Figure ${secN}.3  Project free cash flow and cumulative position (INR crore, nominal).`);
       h2('Annual cash flow (INR crore)');
       const nC = f.cf.length - f.rows.length, cfRows = [];
       for (let i = 0; i < nC; i++) cfRows.push([figs.cashYears[i], '', '', '', '', f1(f.cf[i]), f1(figs.cashCum[i])]);
       f.rows.forEach((x, i) => cfRows.push(['Y' + x.yr, f1(x.rev), f1(x.opex), f1(x.ebitda), f1(x.tax), f1(f.cf[nC + i]), f1(figs.cashCum[nC + i])]));
       table(['Year', 'Revenue', 'OPEX', 'EBITDA', 'Tax', 'Free cash flow', 'Cumulative'], cfRows, { at: { styles: { fontSize: 7.8, cellPadding: { top: 1.1, bottom: 1.1, left: 2, right: 2 } } } });
-      para('Screening economics follow the unit rates and conventions of the Python financial model (CRF-levelised cost, straight-line book depreciation for tax, equal-principal debt). The lender-grade schedule (WDV tax depreciation, MAT, DSRA, working capital, sculpting) remains with the Python model.', 8.5);
     }
 
     /* ---- appendix ---- */
-    if (D.o.inputs) {
+    if (D.sec.inputs) {
       page('Appendix A  Input parameters');
-      const rows = inputRows();
+      const rows = inputRows(D.T);
       let lastSec = '', lastGrp = '';
       const body = [], bold = [];
       rows.forEach(rw => {
@@ -538,15 +548,6 @@
       });
       table(['Group', 'Parameter', 'Value', 'Unit'], body, { numCols: [2], boldRows: bold, at: { styles: { fontSize: 7.6, cellPadding: { top: 1, bottom: 1, left: 2, right: 2 } }, columnStyles: { 0: { cellWidth: 44, textColor: rgb(C.muted) }, 1: { cellWidth: 62 }, 2: { cellWidth: 54 } } } });
     }
-    page('Appendix B  Method summary');
-    bullets([
-      'Solar PV: NOAA solar position; Perez 1990 transposition (Hay–Davies optional); single-axis tracking with backtracking or fixed tilt; 2-D row shading; IAM; PVsyst thermal model; bifacial rear gain; DC losses; CEC inverter efficiency curve with clipping; AC ohmic, transformer and line losses; availability and POI limit.',
-      'Wind: hourly shear matrix (month × hour) from two reference heights; IEC 61400-12-1 air-density correction; turbulence-smoothed generic power curves; EYA loss categories.',
-      'Profiles: multi-year ERA5 / NASA POWER data in local standard time; typical year from Sandia TMY (Finkelstein–Schafer statistics) or a single year; P-level scaling from inter-annual variability and stated uncertainty.',
-      'Plant: hourly busbar cascade (ammonia loop → loop BESS → PEM/alkaline fleet with minimum load, ramp limits and merit order → electrolyser BESS → grid energy bank); look-ahead ride-through rationing; hydrogen buffer; 72-hour cyclic warm-up; product tank with daily or monthly lifting and steady-state inventory cycling.',
-      'Economics: CAPEX from unit rates; IDC from drawdown profile; CRF-levelised LCOA and LCOH at WACC; post-tax project and equity IRR; DSCR on equal-principal repayment; breakeven price at NPV(WACC) = 0.',
-      `Numerical check: maximum hourly busbar imbalance ${D.a.balanceErr.toExponential(1)} MW; electrolyser loading order ${D.d.ORDER.join(' → ')}.`
-    ], 9);
 
     /* ---- contents ---- */
     doc.setPage(tocPage); y = 24; toc.unshift(['Contents', tocPage]);
@@ -567,7 +568,7 @@
       text(`${meta.id}  ·  ${meta.stamp}`, M, PH - 7.5);
       text(`Page ${i} of ${N}`, PW - M, PH - 7.5, { align: 'right' });
     }
-    doc.setProperties({ title: tx(meta.title) + ' — HyProfile simulation report', subject: 'Hourly green hydrogen / ammonia simulation', author: tx(meta.author || 'HyProfile'), creator: 'HyProfile v1.2' });
+    doc.setProperties({ title: tx(meta.title) + ' — HyProfile ' + TYPES[D.T].name.toLowerCase(), subject: 'Hourly green hydrogen / ammonia simulation', author: tx(meta.author || 'HyProfile'), creator: 'HyProfile v1.2' });
     return doc.output('blob');
   }
 
@@ -601,11 +602,12 @@
     /* ---- Summary ---- */
     const s = wb.addWorksheet('Summary', { views: [{ showGridLines: false }], properties: { tabColor: { argb: ACC } } });
     s.columns = [{ width: 34 }, { width: 16 }, { width: 11 }, { width: 46 }, { width: 3 }, { width: 14 }];
-    titleBlock(s, `${meta.title} — HyProfile simulation report`, sub, 6);
+    titleBlock(s, `${meta.title} — HyProfile ${TYPES[D.T].name.toLowerCase()}`, sub, 6);
     let ri = 4;
     const info = [['Site', meta.place], ['Coordinates', `${fmt(meta.lat, 4)}°, ${fmt(meta.lon, 4)}°`], ['Elevation / UTC offset', `${fmt(meta.elev, 0)} m / UTC${meta.tz >= 0 ? '+' : ''}${meta.tz}`], ['Configuration case', meta.caseName],
       ['Solar profile', D.resource.srcSolar], ['Wind profile', D.resource.srcWind], ['Exceedance level', `${D.resource.plevel} (${D.resource.pbasis})`]];
     if (meta.client) info.push(['Prepared for', meta.client]); if (meta.author) info.push(['Prepared by', meta.author]);
+    info.unshift(['Report type', TYPES[D.T].name]);
     info.push(['Generated', meta.stamp], ['Report ID', meta.id]);
     info.forEach(([k, v]) => { const rw = s.getRow(ri++); rw.getCell(1).value = k; rw.getCell(1).font = { color: { argb: MUTED } }; rw.getCell(2).value = v; rw.getCell(2).font = { color: { argb: INK } }; s.mergeCells(rw.number, 2, rw.number, 4); });
     ri++; sectionTitle(s, ri++, 'Key results', 4);
@@ -613,24 +615,26 @@
     const kv = [['Annual NH3 production', a.nh3, 't/yr', '#,##0'], ['Offtake fulfilment', D.ful, '', '0.0%'], ['Green H2 production', a.h2, 't/yr', '#,##0'], ['Electrolyser CUF', a.elyCUF / 100, '', '0.0%'],
       ['NH3 loop utilisation', a.loopUtil / 100, '', '0.0%'], ['RE curtailment', a.re > 0 ? a.curtailed / a.re : 0, '', '0.0%'], ['Loop shutdowns', a.shutdowns, '/yr', '0'],
       ['LCOA', f.lcoa, 'INR/kg', '0.00'], ['LCOH', f.lcoh, 'INR/kg', '0.00'], ['Breakeven green NH3 price', f.breakeven, 'INR/kg', '0.00'], ['Total project cost', f.capex, 'INR Cr', '#,##0.0'],
-      ['Project IRR (post-tax)', fin(f.pirr) ? f.pirr : null, '', '0.00%'], ['Equity IRR', fin(f.eirr) ? f.eirr : null, '', '0.00%'], ['WACC', f.wacc, '', '0.00%'], ['Minimum DSCR', fin(f.minDSCR) ? f.minDSCR : null, 'x', '0.00']];
+      ['Project IRR (post-tax)', fin(f.pirr) ? f.pirr : null, '', '0.00%'], ['Equity IRR', fin(f.eirr) ? f.eirr : null, '', '0.00%'], ['WACC', f.wacc, '', '0.00%'], ['Minimum DSCR', fin(f.minDSCR) ? f.minDSCR : null, 'x', '0.00']]
+      .filter((k, i) => i < 2 || (i < 7 ? D.isTech : D.isFin));
     const k0 = ri;
     kv.forEach((k, i) => { const rw = s.getRow(ri++); const det = D.kpis.find(x => x[0] === k[0]); rw.values = [k[0], k[1], k[2], det ? det[3] : '']; rw.getCell(2).numFmt = k[3]; rw.getCell(2).font = { bold: true, color: { argb: INK } }; rw.getCell(4).font = { color: { argb: MUTED }, size: 9 }; });
     bodyRows(s, k0, ri - 1);
-    ri++; sectionTitle(s, ri++, 'Observations', 4);
-    D.obs.forEach(t => { s.mergeCells(ri, 1, ri, 4); const cl = s.getCell(ri, 1); cl.value = '•  ' + t; cl.alignment = { wrapText: true, vertical: 'top' }; cl.font = { color: { argb: INK } }; s.getRow(ri).height = Math.max(18, Math.ceil(t.length / 105) * 15); ri++; });
+    if (D.notes.length) { ri++; sectionTitle(s, ri++, 'Model notes', 4); }
+    D.notes.forEach(t => { s.mergeCells(ri, 1, ri, 4); const cl = s.getCell(ri, 1); cl.value = t; cl.alignment = { wrapText: true, vertical: 'top' }; cl.font = { color: { argb: INK } }; s.getRow(ri).height = Math.max(18, Math.ceil(t.length / 105) * 15); ri++; });
     ri++; sectionTitle(s, ri++, 'Figures', 4);
-    const figList = [[figs.nh3Monthly, 'Monthly ammonia production vs obligation'], [figs.sankey, 'Annual energy flow'], [figs.reMonthly, 'Monthly renewable generation'], [figs.capex, 'Capital cost breakdown'], [figs.lcoa, 'Levelised cost of ammonia build-up'], [figs.cash, 'Project cash flows']];
+    const FL = { nh3: [figs.nh3Monthly, 'Monthly ammonia production vs obligation'], sankey: [figs.sankey, 'Annual energy flow'], re: [figs.reMonthly, 'Monthly renewable generation'], diurnal: [figs.diurnal, 'Average diurnal generation and electrolyser load'], capex: [figs.capex, 'Capital cost breakdown'], lcoa: [figs.lcoa, 'Levelised cost of ammonia build-up'], cash: [figs.cash, 'Project cash flows'] };
+    const figList = { tech: ['nh3', 'sankey', 're', 'diurnal'], fin: ['capex', 'lcoa', 'cash', 'nh3'], techno: ['nh3', 'sankey', 're', 'capex', 'lcoa', 'cash'] }[D.T].map(k => FL[k]);
     figList.forEach(([fg, cap]) => { s.getCell(ri, 1).value = cap; s.getCell(ri, 1).font = { italic: true, color: { argb: MUTED } }; ri++; img(s, fg, { col: 0, row: ri - 1 }, 700); ri += Math.ceil(700 * fg.h / fg.w / 20) + 1; });
 
     /* ---- Inputs ---- */
-    if (D.o.inputs) {
+    if (D.sec.inputs) {
       const w = wb.addWorksheet('Inputs', { views: [{ state: 'frozen', ySplit: 4, showGridLines: false }] });
       w.columns = [{ width: 24 }, { width: 36 }, { width: 46 }, { width: 22 }, { width: 14 }, { width: 40 }];
       titleBlock(w, 'Input parameters', 'All values used for this run, grouped as in the application', 6);
       const hr = w.getRow(4); hr.values = ['Section', 'Group', 'Parameter', 'Value', 'Unit', 'Key']; headRow(hr);
       let rr = 5, last = '';
-      inputRows().forEach(x => {
+      inputRows(D.T).forEach(x => {
         const rw = w.getRow(rr++); rw.values = [x.sec === last ? '' : x.sec, x.group, x.label, x.value, x.unit, x.key];
         if (x.sec !== last) { rw.getCell(1).font = { bold: true, color: { argb: ACC } }; last = x.sec; }
         rw.getCell(4).alignment = { horizontal: 'right' }; rw.getCell(6).font = { color: { argb: 'FFA19DBA' }, size: 9 }; rw.getCell(2).font = { color: { argb: MUTED } };
@@ -639,7 +643,7 @@
     }
 
     /* ---- Resource ---- */
-    if (D.o.resource) {
+    if (D.sec.resource) {
       const w = wb.addWorksheet('Resource', { views: [{ showGridLines: false }] });
       w.columns = [{ width: 46 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 18 }];
       titleBlock(w, 'Renewable resource & generation profile', sub, 7);
@@ -679,8 +683,8 @@
     }
 
     /* ---- Operations ---- */
-    if (D.o.operations) {
-      const w = wb.addWorksheet('Operations', { views: [{ showGridLines: false }] });
+    if (D.sec.operations || D.sec.production) {
+      const w = wb.addWorksheet(D.sec.production ? 'Production' : 'Operations', { views: [{ showGridLines: false }] });
       w.columns = [{ width: 30 }].concat(new Array(11).fill({ width: 14 }));
       titleBlock(w, 'Plant operation', sub, 12);
       let rr = 4; sectionTitle(w, rr++, 'Annual energy balance', 4);
@@ -708,7 +712,7 @@
     }
 
     /* ---- Economics ---- */
-    if (D.o.economics) {
+    if (D.sec.economics) {
       const w = wb.addWorksheet('Economics', { views: [{ showGridLines: false }] });
       w.columns = [{ width: 38 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 16 }, { width: 16 }];
       titleBlock(w, 'Screening economics', sub, 7);
@@ -746,7 +750,7 @@
     }
 
     /* ---- Hourly ---- */
-    if (D.o.hourly) {
+    if (D.sec.hourly) {
       const w = wb.addWorksheet('Hourly', { views: [{ state: 'frozen', ySplit: 1, xSplit: 1 }] });
       const cols = [['Month', CAL.month], ['Day', CAL.day], ['Hour', CAL.hour], ['Solar eff. (%)', D.prof.solar], ['Wind eff. (%)', D.prof.wind], ['Solar MW', H.solarMW], ['Wind MW', H.windMW], ['RE MW', H.RE], ['NH3 loop %', H.DC], ['NH3 aux MW', H.DP], ['NH3 t/h', H.DProd],
         ['Electrolyser MW', H.EP], ['PEM MW', H.PEM_P], ['ALK MW', H.ALK_P], ['H2 t/h', H.H2E], ['H2 storage t', H.H2S_e], ['H2 storage %', H.H2pct], ['BESS loop MWh', H.BD_e], ['BESS ely MWh', H.BE_e],
@@ -764,7 +768,7 @@
   /* =================================================================
    *  DIALOG & ENTRY POINTS
    * ================================================================= */
-  const fileBase = (D) => ('HyProfile_Report_' + (D.meta.title || 'project')).replace(/[^A-Za-z0-9]+/g, '_').replace(/_+$/, '').slice(0, 60) + '_' + D.meta.date.toISOString().slice(0, 10);
+  const fileBase = (D) => ('HyProfile_' + TYPES[D.T].file + '_Report_' + (D.meta.title || 'project')).replace(/[^A-Za-z0-9]+/g, '_').replace(/_+$/, '').slice(0, 60) + '_' + D.meta.date.toISOString().slice(0, 10);
   async function generate(o) {
     if (!R.plant || !R.fin) { toast('Run the plant simulation first — load a profile or use the sample profile.'); return; }
     saveOpts(o);
@@ -786,7 +790,7 @@
         await new Promise(res => setTimeout(res, 30));
         U.download(base + '.xlsx', await buildXlsx(D, figs));
       }
-      toast(o.format === 'both' ? 'PDF and Excel reports downloaded' : (o.format === 'pdf' ? 'PDF report downloaded' : 'Excel report downloaded'));
+      toast(`${TYPES[D.T].name} downloaded` + (o.format === 'both' ? ' (PDF + Excel)' : o.format === 'pdf' ? ' (PDF)' : ' (Excel)'));
     } catch (e) {
       console.error(e); toast('Report generation failed: ' + (e && e.message ? e.message : e));
     } finally { busy(false); }
@@ -800,7 +804,7 @@
     const ready = !!(R.plant && R.fin);
     const tog = (k, label, sub) => `<label class="rpt-opt"><input type="checkbox" data-k="${k}" ${o[k] ? 'checked' : ''}><span class="sw"></span><span><b>${label}</b><small>${sub}</small></span></label>`;
     bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="rptTitle">
-      <div class="modal-hd"><span class="ic">${U.IC.file}</span><div><h3 id="rptTitle">Generate run report</h3><p>Results, figures and inputs of the current simulation</p></div><button class="btn iconbtn sm" data-x aria-label="Close">✕</button></div>
+      <div class="modal-hd"><span class="ic">${U.IC.file}</span><div><h3 id="rptTitle">Generate run report</h3><p>Technical, financial or techno-economic report of the current simulation</p></div><button class="btn iconbtn sm" data-x aria-label="Close">✕</button></div>
       <div class="modal-bd">
         ${ready ? '' : '<div class="note warn mb">No simulation results yet. Load a profile or run with the sample profile first.</div>'}
         <label class="fld full"><span>Report title</span><div class="inp"><input type="text" data-k="title" value="${esc(o.title)}"></div></label>
@@ -808,7 +812,12 @@
           <label class="fld"><span>Prepared by</span><div class="inp"><input type="text" data-k="author" value="${esc(o.author)}" placeholder="optional"></div></label>
           <label class="fld"><span>Prepared for</span><div class="inp"><input type="text" data-k="client" value="${esc(o.client)}" placeholder="optional"></div></label>
         </div>
-        <div class="rpt-fmt" role="radiogroup">
+        <div class="rpt-lab">Report type</div>
+        <div class="rpt-fmt" role="radiogroup" aria-label="Report type">
+          ${Object.entries(TYPES).map(([v, t]) => `<button type="button" class="rpt-card ${o.type === v ? 'on' : ''}" data-type="${v}" role="radio" aria-checked="${o.type === v}"><b>${t.name}</b><small>${t.sub}</small></button>`).join('')}
+        </div>
+        <div class="rpt-lab">Format</div>
+        <div class="rpt-fmt" role="radiogroup" aria-label="Format">
           ${[['pdf', 'PDF report', 'Paginated A4 document with figures and tables'], ['xlsx', 'Excel workbook', 'Formatted sheets with live totals and figures'], ['both', 'PDF + Excel', 'Both files in one step']].map(([v, l, s2]) => `<button type="button" class="rpt-card ${o.format === v ? 'on' : ''}" data-fmt="${v}" role="radio" aria-checked="${o.format === v}"><b>${l}</b><small>${s2}</small></button>`).join('')}
         </div>
         <div class="rpt-opts">
@@ -827,15 +836,19 @@
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
     bg.addEventListener('click', (e) => { if (e.target === bg || e.target.closest('[data-x]')) close(); });
+    const syncType = () => { const t = (bg.querySelector('[data-type].on') || {}).dataset; const allow = TYPES[t ? t.type : 'techno'].toggles; bg.querySelectorAll('.rpt-opt').forEach(el => { el.hidden = !allow.includes(el.querySelector('input').dataset.k); }); };
+    bg.querySelectorAll('[data-type]').forEach(b => b.onclick = () => { bg.querySelectorAll('[data-type]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('on'); b.setAttribute('aria-checked', 'true'); syncType(); });
+    syncType();
     bg.querySelectorAll('[data-fmt]').forEach(b => b.onclick = () => { bg.querySelectorAll('[data-fmt]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-checked', 'false'); }); b.classList.add('on'); b.setAttribute('aria-checked', 'true'); });
     bg.querySelector('#rptGo').onclick = () => {
       const out = Object.assign({}, o);
       bg.querySelectorAll('[data-k]').forEach(el => { out[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value.trim(); });
+      out.type = bg.querySelector('[data-type].on').dataset.type;
       out.format = (bg.querySelector('[data-fmt].on') || {}).dataset ? bg.querySelector('[data-fmt].on').dataset.fmt : 'pdf';
       close(); generate(out);
     };
     setTimeout(() => { const t = bg.querySelector('[data-k="title"]'); if (t) t.focus(); }, 60);
   }
 
-  window.TRE_REPORT = { open, generate, opts: () => { const o = loadOpts(); if (!o.title) o.title = S.site.project || ''; return o; }, gather, figures, buildPdf, buildXlsx };
+  window.TRE_REPORT = { TYPES, open, generate, opts: () => { const o = loadOpts(); if (!o.title) o.title = S.site.project || ''; return o; }, gather, figures, buildPdf, buildXlsx };
 })();
