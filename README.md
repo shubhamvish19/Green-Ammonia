@@ -10,8 +10,9 @@
 | RE Profile & Export | Excel template, upload (template / PVsyst E_Grid / CSV), model-ready `Efficiency` workbook export |
 | Plant Simulation | JavaScript port of `technical_model.py` (Rev9) hourly dispatch — reproduces the Python results |
 | Economics / Sizing Explorer | Screening LCOA / LCOH / IRR, two-parameter sizing maps, tornado sensitivity |
+| Run report | **Report** button (top bar, Plant and Economics pages): paginated A4 PDF and formatted Excel workbook of the current run — key results, observations, resource and loss chains, energy balance, dispatch weeks, tank ledger, CAPEX / OPEX / LCOA / cash flow, input appendix and optional 8,760-hour sheet |
 
-Libraries (ECharts 5.5.1, Leaflet 1.9.4, ExcelJS 4.4.0) are embedded, so the file works offline except for map tiles and the weather APIs.
+Libraries (ECharts 5.5.1, Leaflet 1.9.4, ExcelJS 4.4.0, jsPDF 4.2.1, jsPDF-AutoTable 5.0.9) are embedded, so the file works offline except for map tiles and the weather APIs.
 
 ## Rebuilding
 
