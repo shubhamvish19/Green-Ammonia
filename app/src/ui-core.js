@@ -136,8 +136,10 @@
     return `<i class="fi" style="--fc:#A3ACC7">${IC.hash}</i>`;
   }
   // field: [key, label, unit, opts]
+  const SPEC = new Map(); let curGroup = '';
   function field(root, f) {
     const [key, label, unit, o = {}] = f;
+    if (o.type !== 'months') SPEC.set(root + '.' + key, { root, key, label, unit, group: curGroup, o });
     if (o.show && !o.show(S)) return '';
     const path = root + '.' + key, v = getPath(path);
     const help = o.help ? `<i class="help" title="${esc(o.help)}">?</i>` : '';
@@ -157,6 +159,10 @@
     return `<label class="${cls}"><span>${ficon(key, label, unit)}${label}${help}</span><div class="inp"><input type="number" ${attrs} data-p="${path}" data-t="num" value="${v}">${unit ? `<em>${unit}</em>` : ''}</div></label>`;
   }
   function section(title, icon, root, fields, open, extra) {
+    curGroup = title;
+    try { return section0(title, icon, root, fields, open, extra); } finally { curGroup = ''; }
+  }
+  function section0(title, icon, root, fields, open, extra) {
     return `<details class="sec" ${open ? 'open' : ''}><summary><span class="ic">${IC[icon] || IC.gear}</span>${title}</summary><div class="body">${fields.map(f => field(root, f)).join('')}${extra || ''}</div></details>`;
   }
   const handlers = [];
@@ -358,5 +364,5 @@
 
   /* ---------------- expose ---------------- */
   window.UI = { $, $$, IC, S, setS: (x) => { Object.keys(S).forEach(k => delete S[k]); Object.assign(S, x); persist(); }, R, defaultState, mergeDeep, persist, fmt, pct, esc, toast, busy, getPath, setPath,
-    kpi, card, emptyState, field, section, onField, chart, baseOpt, theme, disposeCharts, charts, download, exportEfficiencyWorkbook, parseProfileFile, MONTHS, XLSX_MIME, hdrStyle, excelDate, LS_KEY };
+    kpi, card, emptyState, field, section, onField, chart, baseOpt, theme, disposeCharts, charts, download, exportEfficiencyWorkbook, parseProfileFile, MONTHS, XLSX_MIME, hdrStyle, excelDate, LS_KEY, SPEC };
 })();

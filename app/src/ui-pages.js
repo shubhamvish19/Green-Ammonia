@@ -846,6 +846,7 @@
       ${kpi('Loop shutdowns', fmt(a.shutdowns), '/yr', `${fmt(a.hoursRationed)} h rationed (look-ahead)`, 'var(--warn)')}
       ${kpi('Excess NH₃ (tank full)', fmt(a.excess, 0), 't/yr', `Shortfall ${fmt(a.offtakeShortfall, 0)} t`, 'var(--gold)')}
     </div>
+    ${reportBar()}
     <div class="grid g2">
       ${card('Annual energy flow', 'MWh/yr · busbar balance closed every hour', '<div class="chart tall" id="chSankey"></div>')}
       ${card('Monthly production vs obligation', 't NH₃', '<div class="chart tall" id="chPlM"></div>')}
@@ -906,6 +907,10 @@
       visualMap: { show: false, dimension: 1, pieces: [{ lt: c.Derivative_Normal_MTPD * 0.5, color: t.curt }, { gte: c.Derivative_Normal_MTPD * 0.5, lt: c.Derivative_Normal_MTPD * 0.95, color: t.gold }, { gte: c.Derivative_Normal_MTPD * 0.95, color: t.nh3 }] },
       series: [{ name: 'NH₃', type: 'bar', data: day, barWidth: '90%' }, { name: 'Normal rate', type: 'line', data: new Array(365).fill(c.Derivative_Normal_MTPD), symbol: 'none', lineStyle: { type: 'dashed', color: t.textMain, width: 1 } }] }));
   }
+  function reportBar() {
+    return `<div class="rptbar mb"><span class="ic">${IC.file}</span><div><b>Run report</b><small>Technical, financial or techno-economic report · PDF or Excel</small></div><div class="grow"></div><select class="btn sm" data-rpt-type aria-label="Report type">${Object.entries(window.TRE_REPORT ? window.TRE_REPORT.TYPES : {}).map(([k, t]) => `<option value="${k}" ${(window.TRE_REPORT && window.TRE_REPORT.opts().type) === k ? 'selected' : ''}>${t.name}</option>`).join('')}</select><button class="btn sm" data-rpt="pdf">${IC.dl}PDF</button><button class="btn sm" data-rpt="xlsx">${IC.dl}Excel</button><button class="btn sm primary" data-rpt="">Options…</button></div>`;
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-rpt]'); if (!b) return; const k = b.dataset.rpt; if (k) { const sel = b.parentElement.querySelector('[data-rpt-type]'); window.TRE_REPORT.generate(Object.assign(window.TRE_REPORT.opts(), { format: k }, sel ? { type: sel.value } : {})); } else window.TRE_REPORT.open(); });
   function pfdData(r) {
     const a = r.annual, c = r.cfg, H = r.hourly;
     let soc = 0; if (c.BESS_Total_MWh > 0) { for (let i = 0; i < 8760; i++) soc += (H.BD_e[i] + H.BE_e[i]) / c.BESS_Total_MWh; soc /= 8760; }
@@ -988,6 +993,7 @@
       ${kpi('Breakeven green NH₃ price', fmt(f.breakeven, 1), 'INR/kg', 'Project NPV @ WACC = 0', 'var(--bess)')}
       ${kpi('Specific CAPEX', fmt(f.capex * 1e7 / Math.max(1, a.nh3 * 1000), 0), 'INR per kg/yr', `${fmt(f.capex / R.plant.cfg.Ammonia_Loop_Installed_Capacity, 2)} Cr/MTPD`, 'var(--grid)')}
     </div>
+    ${reportBar()}
     <div class="grid g2">
       ${card('CAPEX breakdown', 'Crore INR', '<div class="chart tall" id="chCapex"></div>')}
       ${card('Levelised cost build-up', 'INR per kg NH₃', '<div class="chart tall" id="chLcoa"></div>')}
@@ -1213,7 +1219,7 @@
     buildNav();
     if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
     $('#btnTheme').onclick = () => { const dark = (S.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark'; S.theme = dark ? 'light' : 'dark'; U.persist(); applyTheme(S.theme); };
-    $('#btnSave').onclick = saveProject; $('#btnOpen').onclick = () => $('#fileProject').click();
+    $('#btnReport').onclick = () => window.TRE_REPORT.open(); $('#btnSave').onclick = saveProject; $('#btnOpen').onclick = () => $('#fileProject').click();
     $('#fileProject').onchange = (e) => { if (e.target.files[0]) openProject(e.target.files[0]); e.target.value = ''; };
     $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
     if (S.prof.srcSolar === 'model' && !S.cache) S.prof.srcSolar = 'sample';
@@ -1221,6 +1227,7 @@
     buildProfile(); computePlant();
     go(S.page || 'site');
   }
-  window.TRE_APP = { go, useSample: () => { S.prof.srcSolar = 'sample'; S.prof.srcWind = 'sample'; U.persist(); buildProfile(); computePlant(); refresh(); }, state: S, R, recomputeAll, refresh };
+  window.TRE_APP = { go, useSample: () => { S.prof.srcSolar = 'sample'; S.prof.srcWind = 'sample'; U.persist(); buildProfile(); computePlant(); refresh(); }, state: S, R, recomputeAll, refresh,
+    pvLossTable, windLossRows, formSpec: () => { pvForm(); windForm(); plantForm(); finForm(); return U.SPEC; } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
